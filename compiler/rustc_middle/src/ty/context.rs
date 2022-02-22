@@ -19,7 +19,7 @@ use crate::ty::TyKind::*;
 use crate::ty::{
     self, AdtDef, AdtKind, Binder, BindingMode, BoundVar, CanonicalPolyFnSig,
     ClosureSizeProfileData, Const, ConstS, ConstVid, DefIdTree, ExistentialPredicate, FloatTy,
-    FloatVar, FloatVid, GenericParamDefKind, InferConst, InferTy, IntTy, IntVar, IntVid, List,
+    FloatVar, FloatVid, GenericParamDefKind, InferConst, InferTy, IntTy, IntVar, IntVid, List, ListS,
     ParamConst, ParamTy, PolyFnSig, Predicate, PredicateKind, PredicateS, ProjectionTy, Region,
     RegionKind, ReprOptions, TraitObjectVisitor, Ty, TyKind, TyS, TyVar, TyVid, TypeAndMut, UintTy,
 };
@@ -101,19 +101,19 @@ pub struct CtxtInterners<'tcx> {
     // Specifically use a speedy hash algorithm for these hash sets, since
     // they're accessed quite often.
     type_: InternedSet<'tcx, TyS<'tcx>>,
-    type_list: InternedSet<'tcx, List<Ty<'tcx>>>,
+    type_list: InternedSet<'tcx, ListS<Ty<'tcx>>>,
     substs: InternedSet<'tcx, InternalSubsts<'tcx>>,
-    canonical_var_infos: InternedSet<'tcx, List<CanonicalVarInfo<'tcx>>>,
+    canonical_var_infos: InternedSet<'tcx, ListS<CanonicalVarInfo<'tcx>>>,
     region: InternedSet<'tcx, RegionKind>,
     poly_existential_predicates:
-        InternedSet<'tcx, List<ty::Binder<'tcx, ExistentialPredicate<'tcx>>>>,
+        InternedSet<'tcx, ListS<ty::Binder<'tcx, ExistentialPredicate<'tcx>>>>,
     predicate: InternedSet<'tcx, PredicateS<'tcx>>,
-    predicates: InternedSet<'tcx, List<Predicate<'tcx>>>,
-    projs: InternedSet<'tcx, List<ProjectionKind>>,
-    place_elems: InternedSet<'tcx, List<PlaceElem<'tcx>>>,
+    predicates: InternedSet<'tcx, ListS<Predicate<'tcx>>>,
+    projs: InternedSet<'tcx, ListS<ProjectionKind>>,
+    place_elems: InternedSet<'tcx, ListS<PlaceElem<'tcx>>>,
     const_: InternedSet<'tcx, ConstS<'tcx>>,
     const_allocation: InternedSet<'tcx, Allocation>,
-    bound_variable_kinds: InternedSet<'tcx, List<ty::BoundVariableKind>>,
+    bound_variable_kinds: InternedSet<'tcx, ListS<ty::BoundVariableKind>>,
     layout: InternedSet<'tcx, Layout>,
     adt_def: InternedSet<'tcx, AdtDef>,
 
@@ -1668,8 +1668,8 @@ macro_rules! nop_lift {
 
 macro_rules! nop_list_lift {
     ($set:ident; $ty:ty => $lifted:ty) => {
-        impl<'a, 'tcx> Lift<'tcx> for &'a List<$ty> {
-            type Lifted = &'tcx List<$lifted>;
+        impl<'a, 'tcx> Lift<'tcx> for List<'a, $ty> {
+            type Lifted = List<'tcx, $lifted>;
             fn lift_to_tcx(self, tcx: TyCtxt<'tcx>) -> Option<Self::Lifted> {
                 if self.is_empty() {
                     return Some(List::empty());
@@ -2067,23 +2067,23 @@ impl<'tcx> Hash for InternedInSet<'tcx, PredicateS<'tcx>> {
     }
 }
 
-impl<'tcx, T> Borrow<[T]> for InternedInSet<'tcx, List<T>> {
-    fn borrow<'a>(&'a self) -> &'a [T] {
+impl<'tcx, T> Borrow<[T]> for InternedInSet<'tcx, List<'tcx, T>> {
+    fn borrow(&self) -> &[T] {
         &self.0[..]
     }
 }
 
-impl<'tcx, T: PartialEq> PartialEq for InternedInSet<'tcx, List<T>> {
-    fn eq(&self, other: &InternedInSet<'tcx, List<T>>) -> bool {
+impl<'tcx, T: PartialEq> PartialEq for InternedInSet<'tcx, List<'tcx, T>> {
+    fn eq(&self, other: &InternedInSet<'tcx, List<'tcx, T>>) -> bool {
         // The `Borrow` trait requires that `x.borrow() == y.borrow()` equals
         // `x == y`.
         self.0[..] == other.0[..]
     }
 }
 
-impl<'tcx, T: Eq> Eq for InternedInSet<'tcx, List<T>> {}
+impl<'tcx, T: Eq> Eq for InternedInSet<'tcx, List<'tcx, T>> {}
 
-impl<'tcx, T: Hash> Hash for InternedInSet<'tcx, List<T>> {
+impl<'tcx, T: Hash> Hash for InternedInSet<'tcx, List<'tcx, T>> {
     fn hash<H: Hasher>(&self, s: &mut H) {
         // The `Borrow` trait requires that `x.borrow().hash(s) == x.hash(s)`.
         self.0[..].hash(s)
@@ -2179,7 +2179,7 @@ direct_interners_old! {
 macro_rules! slice_interners {
     ($($field:ident: $method:ident($ty:ty)),+ $(,)?) => (
         impl<'tcx> TyCtxt<'tcx> {
-            $(pub fn $method(self, v: &[$ty]) -> &'tcx List<$ty> {
+            $(pub fn $method(self, v: &[$ty]) -> List<'tcx, $ty> {
                 self.interners.$field.intern_ref(v, || {
                     InternedInSet(List::from_arena(&*self.arena, v))
                 }).0
@@ -2455,7 +2455,7 @@ impl<'tcx> TyCtxt<'tcx> {
     #[inline]
     pub fn mk_dynamic(
         self,
-        obj: &'tcx List<ty::Binder<'tcx, ExistentialPredicate<'tcx>>>,
+        obj: List<'tcx, ty::Binder<'tcx, ExistentialPredicate<'tcx>>>,
         reg: ty::Region<'tcx>,
     ) -> Ty<'tcx> {
         self.mk_ty(Dynamic(obj, reg))
@@ -2482,7 +2482,7 @@ impl<'tcx> TyCtxt<'tcx> {
     }
 
     #[inline]
-    pub fn mk_generator_witness(self, types: ty::Binder<'tcx, &'tcx List<Ty<'tcx>>>) -> Ty<'tcx> {
+    pub fn mk_generator_witness(self, types: ty::Binder<'tcx, List<'tcx, Ty<'tcx>>>) -> Ty<'tcx> {
         self.mk_ty(GeneratorWitness(types))
     }
 
@@ -2588,7 +2588,7 @@ impl<'tcx> TyCtxt<'tcx> {
     pub fn intern_poly_existential_predicates(
         self,
         eps: &[ty::Binder<'tcx, ExistentialPredicate<'tcx>>],
-    ) -> &'tcx List<ty::Binder<'tcx, ExistentialPredicate<'tcx>>> {
+    ) -> List<'tcx, ty::Binder<'tcx, ExistentialPredicate<'tcx>>> {
         assert!(!eps.is_empty());
         assert!(
             eps.array_windows()
@@ -2598,7 +2598,7 @@ impl<'tcx> TyCtxt<'tcx> {
         self._intern_poly_existential_predicates(eps)
     }
 
-    pub fn intern_predicates(self, preds: &[Predicate<'tcx>]) -> &'tcx List<Predicate<'tcx>> {
+    pub fn intern_predicates(self, preds: &[Predicate<'tcx>]) -> List<'tcx, Predicate<'tcx>> {
         // FIXME consider asking the input slice to be sorted to avoid
         // re-interning permutations, in which case that would be asserted
         // here.
@@ -2610,19 +2610,19 @@ impl<'tcx> TyCtxt<'tcx> {
         }
     }
 
-    pub fn intern_type_list(self, ts: &[Ty<'tcx>]) -> &'tcx List<Ty<'tcx>> {
+    pub fn intern_type_list(self, ts: &[Ty<'tcx>]) -> List<'tcx, Ty<'tcx>> {
         if ts.is_empty() { List::empty() } else { self._intern_type_list(ts) }
     }
 
-    pub fn intern_substs(self, ts: &[GenericArg<'tcx>]) -> &'tcx List<GenericArg<'tcx>> {
+    pub fn intern_substs(self, ts: &[GenericArg<'tcx>]) -> List<'tcx, GenericArg<'tcx>> {
         if ts.is_empty() { List::empty() } else { self._intern_substs(ts) }
     }
 
-    pub fn intern_projs(self, ps: &[ProjectionKind]) -> &'tcx List<ProjectionKind> {
+    pub fn intern_projs(self, ps: &[ProjectionKind]) -> List<'tcx, ProjectionKind> {
         if ps.is_empty() { List::empty() } else { self._intern_projs(ps) }
     }
 
-    pub fn intern_place_elems(self, ts: &[PlaceElem<'tcx>]) -> &'tcx List<PlaceElem<'tcx>> {
+    pub fn intern_place_elems(self, ts: &[PlaceElem<'tcx>]) -> List<'tcx, PlaceElem<'tcx>> {
         if ts.is_empty() { List::empty() } else { self._intern_place_elems(ts) }
     }
 
@@ -2636,7 +2636,7 @@ impl<'tcx> TyCtxt<'tcx> {
     pub fn intern_bound_variable_kinds(
         self,
         ts: &[ty::BoundVariableKind],
-    ) -> &'tcx List<ty::BoundVariableKind> {
+    ) -> List<'tcx, ty::BoundVariableKind> {
         if ts.is_empty() { List::empty() } else { self._intern_bound_variable_kinds(ts) }
     }
 
@@ -2662,7 +2662,7 @@ impl<'tcx> TyCtxt<'tcx> {
     pub fn mk_poly_existential_predicates<
         I: InternAs<
             [ty::Binder<'tcx, ExistentialPredicate<'tcx>>],
-            &'tcx List<ty::Binder<'tcx, ExistentialPredicate<'tcx>>>,
+            List<'tcx, ty::Binder<'tcx, ExistentialPredicate<'tcx>>>,
         >,
     >(
         self,
@@ -2671,25 +2671,25 @@ impl<'tcx> TyCtxt<'tcx> {
         iter.intern_with(|xs| self.intern_poly_existential_predicates(xs))
     }
 
-    pub fn mk_predicates<I: InternAs<[Predicate<'tcx>], &'tcx List<Predicate<'tcx>>>>(
+    pub fn mk_predicates<I: InternAs<[Predicate<'tcx>], List<'tcx, Predicate<'tcx>>>>(
         self,
         iter: I,
     ) -> I::Output {
         iter.intern_with(|xs| self.intern_predicates(xs))
     }
 
-    pub fn mk_type_list<I: InternAs<[Ty<'tcx>], &'tcx List<Ty<'tcx>>>>(self, iter: I) -> I::Output {
+    pub fn mk_type_list<I: InternAs<[Ty<'tcx>], List<'tcx, Ty<'tcx>>>>(self, iter: I) -> I::Output {
         iter.intern_with(|xs| self.intern_type_list(xs))
     }
 
-    pub fn mk_substs<I: InternAs<[GenericArg<'tcx>], &'tcx List<GenericArg<'tcx>>>>(
+    pub fn mk_substs<I: InternAs<[GenericArg<'tcx>], List<'tcx, GenericArg<'tcx>>>>(
         self,
         iter: I,
     ) -> I::Output {
         iter.intern_with(|xs| self.intern_substs(xs))
     }
 
-    pub fn mk_place_elems<I: InternAs<[PlaceElem<'tcx>], &'tcx List<PlaceElem<'tcx>>>>(
+    pub fn mk_place_elems<I: InternAs<[PlaceElem<'tcx>], List<'tcx, PlaceElem<'tcx>>>>(
         self,
         iter: I,
     ) -> I::Output {
@@ -2701,7 +2701,7 @@ impl<'tcx> TyCtxt<'tcx> {
     }
 
     pub fn mk_bound_variable_kinds<
-        I: InternAs<[ty::BoundVariableKind], &'tcx List<ty::BoundVariableKind>>,
+        I: InternAs<[ty::BoundVariableKind], List<'tcx, ty::BoundVariableKind>>,
     >(
         self,
         iter: I,
@@ -2784,7 +2784,7 @@ impl<'tcx> TyCtxt<'tcx> {
             .map_or(false, |(owner, set)| owner == id.owner && set.contains(&id.local_id))
     }
 
-    pub fn late_bound_vars(self, id: HirId) -> &'tcx List<ty::BoundVariableKind> {
+    pub fn late_bound_vars(self, id: HirId) -> List<'tcx, ty::BoundVariableKind> {
         self.mk_bound_variable_kinds(
             self.late_bound_vars_map(id.owner)
                 .and_then(|map| map.get(&id.local_id).cloned())

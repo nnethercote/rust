@@ -769,7 +769,7 @@ pub trait PrettyPrinter<'tcx>:
     fn pretty_print_opaque_impl_type(
         mut self,
         def_id: DefId,
-        substs: &'tcx ty::List<ty::GenericArg<'tcx>>,
+        substs: ty::List<'tcx, ty::GenericArg<'tcx>>,
     ) -> Result<Self::Type, Self::Error> {
         define_scoped_cx!(self);
 
@@ -1017,7 +1017,7 @@ pub trait PrettyPrinter<'tcx>:
 
     fn pretty_print_dyn_existential(
         mut self,
-        predicates: &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
+        predicates: ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
     ) -> Result<Self::DynExistential, Self::Error> {
         // Generate the main trait ref, including associated types.
         let mut first = true;
@@ -1728,7 +1728,7 @@ impl<'tcx, F: fmt::Write> Printer<'tcx> for FmtPrinter<'_, 'tcx, F> {
 
     fn print_dyn_existential(
         self,
-        predicates: &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
+        predicates: ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
     ) -> Result<Self::DynExistential, Self::Error> {
         self.pretty_print_dyn_existential(predicates)
     }
@@ -2473,7 +2473,7 @@ impl<'tcx> ty::PolyTraitPredicate<'tcx> {
 
 forward_display_to_print! {
     Ty<'tcx>,
-    &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
+    ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
     ty::Const<'tcx>,
 
     // HACK(eddyb) these are exhaustive instead of generic,
@@ -2498,7 +2498,7 @@ forward_display_to_print! {
 define_print_and_forward_display! {
     (self, cx):
 
-    &'tcx ty::List<Ty<'tcx>> {
+    ty::List<'tcx, Ty<'tcx>> {
         p!("{{", comma_sep(self.iter()), "}}")
     }
 

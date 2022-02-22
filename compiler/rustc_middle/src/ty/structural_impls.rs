@@ -876,7 +876,7 @@ impl<'tcx, T: TypeFoldable<'tcx>> TypeFoldable<'tcx> for ty::Binder<'tcx, T> {
     }
 }
 
-impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>> {
+impl<'tcx> TypeFoldable<'tcx> for ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>> {
     fn try_super_fold_with<F: FallibleTypeFolder<'tcx>>(
         self,
         folder: &mut F,
@@ -889,7 +889,7 @@ impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<ty::Binder<'tcx, ty::Existentia
     }
 }
 
-impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<Ty<'tcx>> {
+impl<'tcx> TypeFoldable<'tcx> for ty::List<'tcx, Ty<'tcx>> {
     fn try_super_fold_with<F: FallibleTypeFolder<'tcx>>(
         self,
         folder: &mut F,
@@ -902,7 +902,7 @@ impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<Ty<'tcx>> {
     }
 }
 
-impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<ProjectionKind> {
+impl<'tcx> TypeFoldable<'tcx> for ty::List<'tcx, ProjectionKind> {
     fn try_super_fold_with<F: FallibleTypeFolder<'tcx>>(
         self,
         folder: &mut F,
@@ -1126,7 +1126,7 @@ impl<'tcx> TypeFoldable<'tcx> for ty::Predicate<'tcx> {
     }
 }
 
-impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<ty::Predicate<'tcx>> {
+impl<'tcx> TypeFoldable<'tcx> for ty::List<'tcx, ty::Predicate<'tcx>> {
     fn try_super_fold_with<F: FallibleTypeFolder<'tcx>>(
         self,
         folder: &mut F,

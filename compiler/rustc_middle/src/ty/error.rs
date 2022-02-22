@@ -63,7 +63,7 @@ pub enum TypeError<'tcx> {
     CyclicConst(ty::Const<'tcx>),
     ProjectionMismatched(ExpectedFound<DefId>),
     ExistentialMismatch(
-        ExpectedFound<&'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>>,
+        ExpectedFound<ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>>,
     ),
     ObjectUnsafeCoercion(DefId),
     ConstMismatch(ExpectedFound<ty::Const<'tcx>>),

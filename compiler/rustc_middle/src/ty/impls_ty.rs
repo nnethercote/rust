@@ -12,7 +12,7 @@ use rustc_query_system::ich::StableHashingContext;
 use std::cell::RefCell;
 use std::mem;
 
-impl<'a, 'tcx, T> HashStable<StableHashingContext<'a>> for &'tcx ty::List<T>
+impl<'a, 'tcx, T> HashStable<StableHashingContext<'a>> for ty::List<'tcx, T>
 where
     T: HashStable<StableHashingContext<'a>>,
 {
@@ -40,7 +40,7 @@ where
     }
 }
 
-impl<'a, 'tcx, T> ToStableHashKey<StableHashingContext<'a>> for &'tcx ty::List<T>
+impl<'a, 'tcx, T> ToStableHashKey<StableHashingContext<'a>> for ty::List<'tcx, T>
 where
     T: HashStable<StableHashingContext<'a>>,
 {

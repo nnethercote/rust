@@ -323,17 +323,17 @@ macro_rules! impl_decodable_via_ref {
     }
 }
 
-impl<'tcx, D: TyDecoder<'tcx>> RefDecodable<'tcx, D> for ty::List<Ty<'tcx>> {
-    fn decode(decoder: &mut D) -> &'tcx Self {
+impl<'tcx, D: TyDecoder<'tcx>> Decodable<D> for ty::List<'tcx, Ty<'tcx>> {
+    fn decode(decoder: &mut D) -> Self {
         let len = decoder.read_usize();
         decoder.tcx().mk_type_list((0..len).map::<Ty<'tcx>, _>(|_| Decodable::decode(decoder)))
     }
 }
 
-impl<'tcx, D: TyDecoder<'tcx>> RefDecodable<'tcx, D>
-    for ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>
+impl<'tcx, D: TyDecoder<'tcx>> Decodable<D>
+    for ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>
 {
-    fn decode(decoder: &mut D) -> &'tcx Self {
+    fn decode(decoder: &mut D) -> Self {
         let len = decoder.read_usize();
         decoder.tcx().mk_poly_existential_predicates(
             (0..len).map::<ty::Binder<'tcx, _>, _>(|_| Decodable::decode(decoder)),
@@ -385,8 +385,8 @@ impl<'tcx, D: TyDecoder<'tcx>> RefDecodable<'tcx, D> for [thir::abstract_const::
     }
 }
 
-impl<'tcx, D: TyDecoder<'tcx>> RefDecodable<'tcx, D> for ty::List<ty::BoundVariableKind> {
-    fn decode(decoder: &mut D) -> &'tcx Self {
+impl<'tcx, D: TyDecoder<'tcx>> Decodable<D> for ty::List<'tcx, ty::BoundVariableKind> {
+    fn decode(decoder: &mut D) -> Self {
         let len = decoder.read_usize();
         decoder.tcx().mk_bound_variable_kinds(
             (0..len).map::<ty::BoundVariableKind, _>(|_| Decodable::decode(decoder)),
@@ -394,17 +394,18 @@ impl<'tcx, D: TyDecoder<'tcx>> RefDecodable<'tcx, D> for ty::List<ty::BoundVaria
     }
 }
 
+// njn: ?
 impl_decodable_via_ref! {
     &'tcx ty::TypeckResults<'tcx>,
-    &'tcx ty::List<Ty<'tcx>>,
-    &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
+    //&'tcx ty::List<Ty<'tcx>>,
+    //&'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>>,
     &'tcx traits::ImplSource<'tcx, ()>,
     &'tcx Allocation,
     &'tcx mir::Body<'tcx>,
     &'tcx mir::UnsafetyCheckResult,
     &'tcx mir::BorrowCheckResult<'tcx>,
     &'tcx mir::coverage::CodeRegion,
-    &'tcx ty::List<ty::BoundVariableKind>,
+    //&'tcx ty::List<ty::BoundVariableKind>,
     &'tcx ty::AdtDef
 }
 
@@ -517,7 +518,7 @@ macro_rules! impl_binder_encode_decode {
 }
 
 impl_binder_encode_decode! {
-    &'tcx ty::List<Ty<'tcx>>,
+    ty::List<'tcx, Ty<'tcx>>,
     ty::FnSig<'tcx>,
     ty::ExistentialPredicate<'tcx>,
     ty::TraitRef<'tcx>,

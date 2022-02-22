@@ -341,7 +341,7 @@ impl<'tcx> Relate<'tcx> for ty::ExistentialTraitRef<'tcx> {
 }
 
 #[derive(Copy, Debug, Clone, TypeFoldable)]
-struct GeneratorWitness<'tcx>(&'tcx ty::List<Ty<'tcx>>);
+struct GeneratorWitness<'tcx>(ty::List<'tcx, Ty<'tcx>>);
 
 impl<'tcx> Relate<'tcx> for GeneratorWitness<'tcx> {
     fn relate<R: TypeRelation<'tcx>>(
@@ -676,7 +676,7 @@ fn check_const_value_eq<'tcx, R: TypeRelation<'tcx>>(
     })
 }
 
-impl<'tcx> Relate<'tcx> for &'tcx ty::List<ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>> {
+impl<'tcx> Relate<'tcx> for ty::List<'tcx, ty::Binder<'tcx, ty::ExistentialPredicate<'tcx>>> {
     fn relate<R: TypeRelation<'tcx>>(
         relation: &mut R,
         a: Self,

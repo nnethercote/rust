@@ -1102,10 +1102,10 @@ pub fn is_trivially_const_drop<'tcx>(ty: Ty<'tcx>) -> bool {
 // folder.tcx().intern_*(&v)
 // ```
 pub fn fold_list<'tcx, F, T>(
-    list: &'tcx ty::List<T>,
+    list: ty::List<'tcx, T>,
     folder: &mut F,
-    intern: impl FnOnce(TyCtxt<'tcx>, &[T]) -> &'tcx ty::List<T>,
-) -> Result<&'tcx ty::List<T>, F::Error>
+    intern: impl FnOnce(TyCtxt<'tcx>, &[T]) -> ty::List<'tcx, T>,
+) -> Result<ty::List<'tcx, T>, F::Error>
 where
     F: FallibleTypeFolder<'tcx>,
     T: TypeFoldable<'tcx> + PartialEq + Copy,
@@ -1140,8 +1140,8 @@ pub struct AlwaysRequiresDrop;
 /// with their underlying types.
 pub fn normalize_opaque_types<'tcx>(
     tcx: TyCtxt<'tcx>,
-    val: &'tcx List<ty::Predicate<'tcx>>,
-) -> &'tcx List<ty::Predicate<'tcx>> {
+    val: List<'tcx, ty::Predicate<'tcx>>,
+) -> List<'tcx, ty::Predicate<'tcx>> {
     let mut visitor = OpaqueTypeExpander {
         seen_opaque_tys: FxHashSet::default(),
         expanded_cache: FxHashMap::default(),

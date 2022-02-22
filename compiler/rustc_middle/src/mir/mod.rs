@@ -1748,7 +1748,7 @@ pub struct Place<'tcx> {
     pub local: Local,
 
     /// projection out of a place (access a field, deref a pointer, etc)
-    pub projection: &'tcx List<PlaceElem<'tcx>>,
+    pub projection: List<'tcx, PlaceElem<'tcx>>,
 }
 
 #[cfg(all(target_arch = "x86_64", target_pointer_width = "64"))]

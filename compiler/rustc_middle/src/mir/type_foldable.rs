@@ -177,7 +177,7 @@ impl<'tcx> TypeFoldable<'tcx> for Place<'tcx> {
     }
 }
 
-impl<'tcx> TypeFoldable<'tcx> for &'tcx ty::List<PlaceElem<'tcx>> {
+impl<'tcx> TypeFoldable<'tcx> for ty::List<'tcx, PlaceElem<'tcx>> {
     fn try_super_fold_with<F: FallibleTypeFolder<'tcx>>(
         self,
         folder: &mut F,

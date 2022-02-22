@@ -202,10 +202,12 @@ impl<'tcx, D: TyDecoder<'tcx>> Decodable<D> for GenericArg<'tcx> {
     }
 }
 
-/// A substitution mapping generic parameters to new values.
-pub type InternalSubsts<'tcx> = List<GenericArg<'tcx>>;
+// njn: which of these two to keep?
 
-pub type SubstsRef<'tcx> = &'tcx InternalSubsts<'tcx>;
+/// A substitution mapping generic parameters to new values.
+pub type InternalSubsts<'tcx> = List<'tcx, GenericArg<'tcx>>;
+
+pub type SubstsRef<'tcx> = List<'tcx, GenericArg<'tcx>>;
 
 impl<'a, 'tcx> InternalSubsts<'tcx> {
     /// Interpret these substitutions as the substitutions of a closure type.

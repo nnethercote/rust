@@ -157,7 +157,7 @@ pub enum TyKind<'tcx> {
     FnPtr(PolyFnSig<'tcx>),
 
     /// A trait object. Written as `dyn for<'b> Trait<'b, Assoc = u32> + Send + 'a`.
-    Dynamic(&'tcx List<Binder<'tcx, ExistentialPredicate<'tcx>>>, ty::Region<'tcx>),
+    Dynamic(List<'tcx, Binder<'tcx, ExistentialPredicate<'tcx>>>, ty::Region<'tcx>),
 
     /// The anonymous type of a closure. Used to represent the type of `|a| a`.
     ///
@@ -194,7 +194,7 @@ pub enum TyKind<'tcx> {
     ///     yield x[0];
     /// }
     /// ```
-    GeneratorWitness(Binder<'tcx, &'tcx List<Ty<'tcx>>>),
+    GeneratorWitness(Binder<'tcx, List<'tcx, Ty<'tcx>>>),
 
     /// The never type `!`.
     Never,
@@ -873,7 +873,7 @@ impl<'tcx> Binder<'tcx, ExistentialPredicate<'tcx>> {
     }
 }
 
-impl<'tcx> List<ty::Binder<'tcx, ExistentialPredicate<'tcx>>> {
+impl<'tcx> List<'tcx, ty::Binder<'tcx, ExistentialPredicate<'tcx>>> {
     /// Returns the "principal `DefId`" of this set of existential predicates.
     ///
     /// A Rust trait object type consists (in addition to a lifetime bound)
@@ -1077,7 +1077,7 @@ pub enum BoundVariableKind {
 ///
 /// `Decodable` and `Encodable` are implemented for `Binder<T>` using the `impl_binder_encode_decode!` macro.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct Binder<'tcx, T>(T, &'tcx List<BoundVariableKind>);
+pub struct Binder<'tcx, T>(T, List<'tcx, BoundVariableKind>);
 
 impl<'tcx, T> Binder<'tcx, T>
 where
@@ -1092,7 +1092,7 @@ where
         Binder(value, ty::List::empty())
     }
 
-    pub fn bind_with_vars(value: T, vars: &'tcx List<BoundVariableKind>) -> Binder<'tcx, T> {
+    pub fn bind_with_vars(value: T, vars: List<'tcx, BoundVariableKind>) -> Binder<'tcx, T> {
         if cfg!(debug_assertions) {
             let mut validator = ValidateBoundVars::new(vars);
             value.visit_with(&mut validator);
@@ -1122,7 +1122,7 @@ impl<'tcx, T> Binder<'tcx, T> {
         self.0
     }
 
-    pub fn bound_vars(&self) -> &'tcx List<BoundVariableKind> {
+    pub fn bound_vars(&self) -> List<'tcx, BoundVariableKind> {
         self.1
     }
 
@@ -1298,7 +1298,7 @@ pub type PolyGenSig<'tcx> = Binder<'tcx, GenSig<'tcx>>;
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, TyEncodable, TyDecodable)]
 #[derive(HashStable, TypeFoldable)]
 pub struct FnSig<'tcx> {
-    pub inputs_and_output: &'tcx List<Ty<'tcx>>,
+    pub inputs_and_output: List<'tcx, Ty<'tcx>>,
     pub c_variadic: bool,
     pub unsafety: hir::Unsafety,
     pub abi: abi::Abi,
@@ -1336,7 +1336,7 @@ impl<'tcx> PolyFnSig<'tcx> {
     pub fn input(&self, index: usize) -> ty::Binder<'tcx, Ty<'tcx>> {
         self.map_bound_ref(|fn_sig| fn_sig.inputs()[index])
     }
-    pub fn inputs_and_output(&self) -> ty::Binder<'tcx, &'tcx List<Ty<'tcx>>> {
+    pub fn inputs_and_output(&self) -> ty::Binder<'tcx, List<'tcx, Ty<'tcx>>> {
         self.map_bound_ref(|fn_sig| fn_sig.inputs_and_output)
     }
     #[inline]

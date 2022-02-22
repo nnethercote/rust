@@ -920,7 +920,7 @@ impl<'tcx> TyCtxt<'tcx> {
 }
 
 pub struct ValidateBoundVars<'tcx> {
-    bound_vars: &'tcx ty::List<ty::BoundVariableKind>,
+    bound_vars: ty::List<'tcx, ty::BoundVariableKind>,
     binder_index: ty::DebruijnIndex,
     // We may encounter the same variable at different levels of binding, so
     // this can't just be `Ty`
@@ -928,7 +928,7 @@ pub struct ValidateBoundVars<'tcx> {
 }
 
 impl<'tcx> ValidateBoundVars<'tcx> {
-    pub fn new(bound_vars: &'tcx ty::List<ty::BoundVariableKind>) -> Self {
+    pub fn new(bound_vars: ty::List<'tcx, ty::BoundVariableKind>) -> Self {
         ValidateBoundVars {
             bound_vars,
             binder_index: ty::INNERMOST,

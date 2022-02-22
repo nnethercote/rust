@@ -2870,8 +2870,8 @@ impl<'tcx> fmt::Display for FnAbiError<'tcx> {
 // just for error handling.
 #[derive(Debug)]
 pub enum FnAbiRequest<'tcx> {
-    OfFnPtr { sig: ty::PolyFnSig<'tcx>, extra_args: &'tcx ty::List<Ty<'tcx>> },
-    OfInstance { instance: ty::Instance<'tcx>, extra_args: &'tcx ty::List<Ty<'tcx>> },
+    OfFnPtr { sig: ty::PolyFnSig<'tcx>, extra_args: ty::List<'tcx, Ty<'tcx>> },
+    OfInstance { instance: ty::Instance<'tcx>, extra_args: ty::List<'tcx, Ty<'tcx>> },
 }
 
 /// Trait for contexts that want to be able to compute `FnAbi`s.
@@ -2906,7 +2906,7 @@ pub trait FnAbiOf<'tcx>: FnAbiOfHelpers<'tcx> {
     fn fn_abi_of_fn_ptr(
         &self,
         sig: ty::PolyFnSig<'tcx>,
-        extra_args: &'tcx ty::List<Ty<'tcx>>,
+        extra_args: ty::List<'tcx, Ty<'tcx>>,
     ) -> Self::FnAbiOfResult {
         // FIXME(eddyb) get a better `span` here.
         let span = self.layout_tcx_at_span();
@@ -2926,7 +2926,7 @@ pub trait FnAbiOf<'tcx>: FnAbiOfHelpers<'tcx> {
     fn fn_abi_of_instance(
         &self,
         instance: ty::Instance<'tcx>,
-        extra_args: &'tcx ty::List<Ty<'tcx>>,
+        extra_args: ty::List<'tcx, Ty<'tcx>>,
     ) -> Self::FnAbiOfResult {
         // FIXME(eddyb) get a better `span` here.
         let span = self.layout_tcx_at_span();
@@ -2949,7 +2949,7 @@ impl<'tcx, C: FnAbiOfHelpers<'tcx>> FnAbiOf<'tcx> for C {}
 
 fn fn_abi_of_fn_ptr<'tcx>(
     tcx: TyCtxt<'tcx>,
-    query: ty::ParamEnvAnd<'tcx, (ty::PolyFnSig<'tcx>, &'tcx ty::List<Ty<'tcx>>)>,
+    query: ty::ParamEnvAnd<'tcx, (ty::PolyFnSig<'tcx>, ty::List<'tcx, Ty<'tcx>>)>,
 ) -> Result<&'tcx FnAbi<'tcx, Ty<'tcx>>, FnAbiError<'tcx>> {
     let (param_env, (sig, extra_args)) = query.into_parts();
 
@@ -2964,7 +2964,7 @@ fn fn_abi_of_fn_ptr<'tcx>(
 
 fn fn_abi_of_instance<'tcx>(
     tcx: TyCtxt<'tcx>,
-    query: ty::ParamEnvAnd<'tcx, (ty::Instance<'tcx>, &'tcx ty::List<Ty<'tcx>>)>,
+    query: ty::ParamEnvAnd<'tcx, (ty::Instance<'tcx>, ty::List<'tcx, Ty<'tcx>>)>,
 ) -> Result<&'tcx FnAbi<'tcx, Ty<'tcx>>, FnAbiError<'tcx>> {
     let (param_env, (instance, extra_args)) = query.into_parts();
 

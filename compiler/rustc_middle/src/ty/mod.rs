@@ -68,7 +68,7 @@ pub use self::context::{
     Lift, OnDiskCache, TyCtxt, TypeckResults, UserType, UserTypeAnnotationIndex,
 };
 pub use self::instance::{Instance, InstanceDef};
-pub use self::list::List;
+pub use self::list::{List, ListS};
 pub use self::sty::BoundRegionKind::*;
 pub use self::sty::RegionKind::*;
 pub use self::sty::TyKind::*;
@@ -1279,7 +1279,7 @@ pub struct ParamEnv<'tcx> {
     /// want `Reveal::All`.
     ///
     /// Note: This is packed, use the reveal() method to access it.
-    packed: CopyTaggedPtr<&'tcx List<Predicate<'tcx>>, ParamTag, true>,
+    packed: CopyTaggedPtr<List<'tcx, Predicate<'tcx>>, ParamTag, true>,
 }
 
 #[derive(Copy, Clone)]
@@ -1359,7 +1359,7 @@ impl<'tcx> ParamEnv<'tcx> {
     }
 
     #[inline]
-    pub fn caller_bounds(self) -> &'tcx List<Predicate<'tcx>> {
+    pub fn caller_bounds(self) -> List<'tcx, Predicate<'tcx>> {
         self.packed.pointer()
     }
 
@@ -1393,7 +1393,7 @@ impl<'tcx> ParamEnv<'tcx> {
     /// Construct a trait environment with the given set of predicates.
     #[inline]
     pub fn new(
-        caller_bounds: &'tcx List<Predicate<'tcx>>,
+        caller_bounds: List<'tcx, Predicate<'tcx>>,
         reveal: Reveal,
         constness: hir::Constness,
     ) -> Self {

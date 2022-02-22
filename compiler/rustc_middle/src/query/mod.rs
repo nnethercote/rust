@@ -217,7 +217,7 @@ rustc_queries! {
     /// ```
     ///
     /// Bounds from the parent (e.g. with nested impl trait) are not included.
-    query item_bounds(key: DefId) -> &'tcx ty::List<ty::Predicate<'tcx>> {
+    query item_bounds(key: DefId) -> ty::List<'tcx, ty::Predicate<'tcx>> {
         desc { |tcx| "elaborating item bounds for `{}`", tcx.def_path_str(key) }
     }
 
@@ -1194,7 +1194,7 @@ rustc_queries! {
     /// A list of types where the ADT requires drop if and only if any of
     /// those types require drop. If the ADT is known to always need drop
     /// then `Err(AlwaysRequiresDrop)` is returned.
-    query adt_drop_tys(def_id: DefId) -> Result<&'tcx ty::List<Ty<'tcx>>, AlwaysRequiresDrop> {
+    query adt_drop_tys(def_id: DefId) -> Result<ty::List<'tcx, Ty<'tcx>>, AlwaysRequiresDrop> {
         desc { |tcx| "computing when `{}` needs drop", tcx.def_path_str(def_id) }
         cache_on_disk_if { true }
     }
@@ -1205,7 +1205,7 @@ rustc_queries! {
     /// by the user or does anything that will have any observable behavior (other than
     /// freeing up memory). If the ADT is known to have a significant destructor then
     /// `Err(AlwaysRequiresDrop)` is returned.
-    query adt_significant_drop_tys(def_id: DefId) -> Result<&'tcx ty::List<Ty<'tcx>>, AlwaysRequiresDrop> {
+    query adt_significant_drop_tys(def_id: DefId) -> Result<ty::List<'tcx, Ty<'tcx>>, AlwaysRequiresDrop> {
         desc { |tcx| "computing when `{}` has a significant destructor", tcx.def_path_str(def_id) }
         cache_on_disk_if { false }
     }
@@ -1224,7 +1224,7 @@ rustc_queries! {
     /// NB: this doesn't handle virtual calls - those should use `fn_abi_of_instance`
     /// instead, where the instance is an `InstanceDef::Virtual`.
     query fn_abi_of_fn_ptr(
-        key: ty::ParamEnvAnd<'tcx, (ty::PolyFnSig<'tcx>, &'tcx ty::List<Ty<'tcx>>)>
+        key: ty::ParamEnvAnd<'tcx, (ty::PolyFnSig<'tcx>, ty::List<'tcx, Ty<'tcx>>)>
     ) -> Result<&'tcx abi::call::FnAbi<'tcx, Ty<'tcx>>, ty::layout::FnAbiError<'tcx>> {
         desc { "computing call ABI of `{}` function pointers", key.value.0 }
         remap_env_constness
@@ -1236,7 +1236,7 @@ rustc_queries! {
     /// NB: that includes virtual calls, which are represented by "direct calls"
     /// to an `InstanceDef::Virtual` instance (of `<dyn Trait as Trait>::fn`).
     query fn_abi_of_instance(
-        key: ty::ParamEnvAnd<'tcx, (ty::Instance<'tcx>, &'tcx ty::List<Ty<'tcx>>)>
+        key: ty::ParamEnvAnd<'tcx, (ty::Instance<'tcx>, ty::List<'tcx, Ty<'tcx>>)>
     ) -> Result<&'tcx abi::call::FnAbi<'tcx, Ty<'tcx>>, ty::layout::FnAbiError<'tcx>> {
         desc { "computing call ABI of `{}`", key.value.0 }
         remap_env_constness
@@ -1907,7 +1907,7 @@ rustc_queries! {
         remap_env_constness
     }
 
-    query normalize_opaque_types(key: &'tcx ty::List<ty::Predicate<'tcx>>) -> &'tcx ty::List<ty::Predicate<'tcx>> {
+    query normalize_opaque_types(key: ty::List<'tcx, ty::Predicate<'tcx>>) -> ty::List<'tcx, ty::Predicate<'tcx>> {
         desc { "normalizing opaque types in {:?}", key }
     }
 

@@ -41,7 +41,7 @@ pub struct Canonical<'tcx, V> {
     pub value: V,
 }
 
-pub type CanonicalVarInfos<'tcx> = &'tcx List<CanonicalVarInfo<'tcx>>;
+pub type CanonicalVarInfos<'tcx> = List<'tcx, CanonicalVarInfo<'tcx>>;
 
 /// A set of values corresponding to the canonical variables from some
 /// `Canonical`. You can give these values to
