@@ -137,7 +137,7 @@ impl<'a> FlattenNonterminals<'a> {
                 let tts = (self.nt_to_tokenstream)(&nt, self.parse_sess, self.synthesize_tokens);
                 TokenTree::Delimited(
                     DelimSpan::from_single(token.span),
-                    Delimiter::Invisible,
+                    Delimiter::Invisible { skip: true }, // njn: ?
                     self.process_token_stream(tts),
                 )
                 .into()

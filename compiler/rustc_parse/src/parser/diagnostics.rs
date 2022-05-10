@@ -2109,7 +2109,9 @@ impl<'a> Parser<'a> {
                     brace_depth -= 1;
                     continue;
                 }
-            } else if self.token == token::Eof || self.eat(&token::CloseDelim(Delimiter::Invisible))
+            // njn: ??
+            } else if self.token == token::Eof
+                || self.eat(&token::CloseDelim(Delimiter::Invisible { skip: false }))
             {
                 return;
             } else {

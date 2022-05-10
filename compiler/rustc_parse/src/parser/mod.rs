@@ -277,14 +277,14 @@ impl TokenCursor {
                         // Set `open_delim` to true here because we deal with it immediately.
                         let frame = TokenCursorFrame::new(Some((delim, sp)), tts.clone());
                         self.stack.push(mem::replace(&mut self.frame, frame));
-                        if delim != Delimiter::Invisible {
+                        if delim != (Delimiter::Invisible { skip: true }) {
                             return (Token::new(token::OpenDelim(delim), sp.open), Spacing::Alone);
                         }
                         // No open delimeter to return; continue on to the next iteration.
                     }
                 };
             } else if let Some(frame) = self.stack.pop() {
-                if let Some((delim, span)) = self.frame.delim_sp && delim != Delimiter::Invisible {
+                if let Some((delim, span)) = self.frame.delim_sp && delim != (Delimiter::Invisible { skip: true }) {
                     self.frame = frame;
                     return (Token::new(token::CloseDelim(delim), span.close), Spacing::Alone);
                 }
@@ -1004,7 +1004,8 @@ impl<'a> Parser<'a> {
         }
         debug_assert!(!matches!(
             next.0.kind,
-            token::OpenDelim(Delimiter::Invisible) | token::CloseDelim(Delimiter::Invisible)
+            token::OpenDelim(Delimiter::Invisible { skip: true })
+                | token::CloseDelim(Delimiter::Invisible { skip: true })
         ));
         self.inlined_bump_with(next)
     }
@@ -1017,10 +1018,10 @@ impl<'a> Parser<'a> {
         }
 
         let frame = &self.token_cursor.frame;
-        if let Some((delim, span)) = frame.delim_sp && delim != Delimiter::Invisible {
+        if let Some((delim, span)) = frame.delim_sp && (delim != Delimiter::Invisible { skip: true }) {
             let all_normal = (0..dist).all(|i| {
                 let token = frame.tree_cursor.look_ahead(i);
-                !matches!(token, Some(TokenTree::Delimited(_, Delimiter::Invisible, _)))
+                !matches!(token, Some(TokenTree::Delimited(_, Delimiter::Invisible { skip: true }, _)))
             });
             if all_normal {
                 return match frame.tree_cursor.look_ahead(dist - 1) {
@@ -1042,7 +1043,8 @@ impl<'a> Parser<'a> {
             token = cursor.next(/* desugar_doc_comments */ false).0;
             if matches!(
                 token.kind,
-                token::OpenDelim(Delimiter::Invisible) | token::CloseDelim(Delimiter::Invisible)
+                token::OpenDelim(Delimiter::Invisible { skip: true })
+                    | token::CloseDelim(Delimiter::Invisible { skip: true })
             ) {
                 continue;
             }

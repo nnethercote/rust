@@ -414,11 +414,11 @@ fn make_token_stream(
             FlatToken::Token(Token { kind: TokenKind::CloseDelim(delim), span }) => {
                 // HACK: If we encounter a mismatched `Invisible` delimiter at the top
                 // level, just ignore it.
-                if matches!(delim, Delimiter::Invisible)
+                if matches!(delim, Delimiter::Invisible { .. })
                     && (stack.len() == 1
                         || !matches!(
                             stack.last_mut().unwrap().open_delim_sp.unwrap().0,
-                            Delimiter::Invisible
+                            Delimiter::Invisible { .. }
                         ))
                 {
                     token_and_spacing = iter.next();
@@ -431,8 +431,8 @@ fn make_token_stream(
                 // HACK: If our current frame has a mismatched opening `Invisible` delimiter,
                 // merge our current frame with the one above it. That is, transform
                 // `[ { < first second } third ]` into `[ { first second } third ]`
-                if !matches!(delim, Delimiter::Invisible)
-                    && matches!(frame_data.open_delim_sp.unwrap().0, Delimiter::Invisible)
+                if !matches!(delim, Delimiter::Invisible { .. })
+                    && matches!(frame_data.open_delim_sp.unwrap().0, Delimiter::Invisible { .. })
                 {
                     stack.last_mut().unwrap().inner.extend(frame_data.inner);
                     // Process our closing delimiter again, this time at the previous
@@ -475,7 +475,8 @@ fn make_token_stream(
     // HACK: If we don't have a closing `Invisible` delimiter for our last
     // frame, merge the frame with the top-level frame. That is,
     // turn `< first second` into `first second`
-    if stack.len() == 2 && stack[1].open_delim_sp.unwrap().0 == Delimiter::Invisible {
+    if stack.len() == 2 && matches!(stack[1].open_delim_sp.unwrap().0, Delimiter::Invisible { .. })
+    {
         let temp_buf = stack.pop().unwrap();
         stack.last_mut().unwrap().inner.extend(temp_buf.inner);
     }

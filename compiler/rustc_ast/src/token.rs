@@ -56,7 +56,9 @@ pub enum Delimiter {
     /// `$var * 3` where `$var` is `1 + 2`.
     /// Invisible delimiters are not directly writable in normal Rust code except as comments.
     /// Therefore, they might not survive a roundtrip of a token stream through a string.
-    Invisible,
+    ///
+    /// njn: comment about `skip`
+    Invisible { skip: bool },
 }
 
 #[derive(Clone, Copy, PartialEq, Encodable, Decodable, Debug, HashStable_Generic)]

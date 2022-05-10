@@ -599,7 +599,7 @@ pub trait PrintState<'a>: std::ops::Deref<Target = pp::Printer> + std::ops::Dere
                 self.end();
                 self.bclose(span, empty);
             }
-            Some(Delimiter::Invisible) => {
+            Some(Delimiter::Invisible { .. }) => {
                 self.word("/*«*/");
                 let empty = tts.is_empty();
                 if !empty {
@@ -786,8 +786,8 @@ pub trait PrintState<'a>: std::ops::Deref<Target = pp::Printer> + std::ops::Dere
             token::CloseDelim(Delimiter::Bracket) => "]".into(),
             token::OpenDelim(Delimiter::Brace) => "{".into(),
             token::CloseDelim(Delimiter::Brace) => "}".into(),
-            token::OpenDelim(Delimiter::Invisible) => "/*«*/".into(),
-            token::CloseDelim(Delimiter::Invisible) => "/*»*/".into(),
+            token::OpenDelim(Delimiter::Invisible { .. }) => "/*«*/".into(),
+            token::CloseDelim(Delimiter::Invisible { .. }) => "/*»*/".into(),
             token::Pound => "#".into(),
             token::Dollar => "$".into(),
             token::Question => "?".into(),
