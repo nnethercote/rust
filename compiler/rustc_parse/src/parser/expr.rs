@@ -34,7 +34,7 @@ macro_rules! maybe_whole_expr {
     ($p:expr) => {
         if let token::Interpolated(nt) = &$p.token.kind {
             match &**nt {
-                token::NtExpr(e) | token::NtLiteral(e) => {
+                token::NtLiteral(e) => {
                     let e = e.clone();
                     $p.bump();
                     return Ok(e);
@@ -652,7 +652,7 @@ impl<'a> Parser<'a> {
             // can't continue an expression after an ident
             token::Ident(name, is_raw) => token::ident_can_begin_expr(name, t.span, is_raw),
             token::Literal(..) | token::Pound => true,
-            _ => t.is_whole_expr(),
+            _ => t.is_whole_expr(), // njn: ?
         };
         self.token.is_ident_named(sym::not) && self.look_ahead(1, token_cannot_continue_expr)
     }
@@ -1165,6 +1165,11 @@ impl<'a> Parser<'a> {
         let open_paren = self.token.span;
 
         let mut seq = self.parse_paren_expr_seq().map(|args| {
+            // njn: this is assuming that the function name is in a single
+            // token, and that `pref_token.span` covers that. But if the
+            // function name was expanded from a macro, it could have the form
+            // `«`, ident, `»`, and so prev_token.span doesn't go back far
+            // enough
             self.mk_expr(lo.to(self.prev_token.span), self.mk_call(fun, args), AttrVec::new())
         });
         if let Some(expr) =
@@ -1305,6 +1310,8 @@ impl<'a> Parser<'a> {
             self.parse_lit_expr(attrs)
         } else if self.check(&token::OpenDelim(Delimiter::Parenthesis)) {
             self.parse_tuple_parens_expr(attrs)
+        } else if self.check(&token::OpenDelim(Delimiter::Invisible { skip: false })) {
+            self.parse_invisibles_expr()
         } else if self.check(&token::OpenDelim(Delimiter::Brace)) {
             self.parse_block_expr(None, lo, BlockCheckMode::Default, attrs)
         } else if self.check(&token::BinOp(token::Or)) || self.check(&token::OrOr) {
@@ -1444,6 +1451,14 @@ impl<'a> Parser<'a> {
             ExprKind::Tup(es)
         };
         let expr = self.mk_expr(lo.to(self.prev_token.span), kind, attrs);
+        self.maybe_recover_from_bad_qpath(expr, true)
+    }
+
+    fn parse_invisibles_expr(&mut self) -> PResult<'a, P<Expr>> {
+        // njn: reasonable?
+        self.expect(&token::OpenDelim(Delimiter::Invisible { skip: false }))?;
+        let expr = self.parse_expr()?;
+        self.expect(&token::CloseDelim(Delimiter::Invisible { skip: false }))?;
         self.maybe_recover_from_bad_qpath(expr, true)
     }
 
@@ -1715,7 +1730,6 @@ impl<'a> Parser<'a> {
         self.parse_opt_lit().ok_or_else(|| {
             if let token::Interpolated(inner) = &self.token.kind {
                 let expr = match inner.as_ref() {
-                    token::NtExpr(expr) => Some(expr),
                     token::NtLiteral(expr) => Some(expr),
                     _ => None,
                 };
@@ -1760,6 +1774,8 @@ impl<'a> Parser<'a> {
         }
 
         let token = recovered.as_ref().unwrap_or(&self.token);
+        // njn: this doesn't work if the token is `«`, causes the
+        // extern-abi-from-mac-literal-frag.rs failure, also my x.rs test
         match Lit::from_token(token) {
             Ok(lit) => {
                 self.bump();
@@ -1928,6 +1944,15 @@ impl<'a> Parser<'a> {
     /// Keep this in sync with `Token::can_begin_literal_maybe_minus`.
     pub fn parse_literal_maybe_minus(&mut self) -> PResult<'a, P<Expr>> {
         maybe_whole_expr!(self);
+
+        // njn: kind of weird to allow arbitrary expressions here! needed for
+        // macros, there are various checks later that will fail if it's not a
+        // literal
+        // njn: or could it be made more restrictive? E.g. allow invisibles
+        // around
+        if self.check(&token::OpenDelim(Delimiter::Invisible { skip: false })) {
+            return self.parse_invisibles_expr();
+        }
 
         let lo = self.token.span;
         let minus_present = self.eat(&token::BinOp(token::Minus));

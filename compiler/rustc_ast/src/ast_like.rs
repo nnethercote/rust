@@ -45,7 +45,7 @@ impl AstLike for crate::token::Nonterminal {
         match self {
             Nonterminal::NtItem(item) => item.attrs(),
             Nonterminal::NtStmt(stmt) => stmt.attrs(),
-            Nonterminal::NtExpr(expr) | Nonterminal::NtLiteral(expr) => expr.attrs(),
+            Nonterminal::NtLiteral(expr) => expr.attrs(),
             Nonterminal::NtPat(_)
             | Nonterminal::NtTy(_)
             | Nonterminal::NtMeta(_)
@@ -60,7 +60,7 @@ impl AstLike for crate::token::Nonterminal {
         match self {
             Nonterminal::NtItem(item) => item.visit_attrs(f),
             Nonterminal::NtStmt(stmt) => stmt.visit_attrs(f),
-            Nonterminal::NtExpr(expr) | Nonterminal::NtLiteral(expr) => expr.visit_attrs(f),
+            Nonterminal::NtLiteral(expr) => expr.visit_attrs(f),
             Nonterminal::NtPat(_)
             | Nonterminal::NtTy(_)
             | Nonterminal::NtMeta(_)
@@ -75,7 +75,7 @@ impl AstLike for crate::token::Nonterminal {
         match self {
             Nonterminal::NtItem(item) => item.tokens_mut(),
             Nonterminal::NtStmt(stmt) => stmt.tokens_mut(),
-            Nonterminal::NtExpr(expr) | Nonterminal::NtLiteral(expr) => expr.tokens_mut(),
+            Nonterminal::NtLiteral(expr) => expr.tokens_mut(),
             Nonterminal::NtPat(pat) => pat.tokens_mut(),
             Nonterminal::NtTy(ty) => ty.tokens_mut(),
             Nonterminal::NtMeta(attr_item) => attr_item.tokens_mut(),

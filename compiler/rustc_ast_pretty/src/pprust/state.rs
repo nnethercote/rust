@@ -727,7 +727,6 @@ pub trait PrintState<'a>: std::ops::Deref<Target = pp::Printer> + std::ops::Dere
 
     fn nonterminal_to_string(&self, nt: &Nonterminal) -> String {
         match *nt {
-            token::NtExpr(ref e) => self.expr_to_string(e),
             token::NtMeta(ref e) => self.attr_item_to_string(e),
             token::NtTy(ref e) => self.ty_to_string(e),
             token::NtPath(ref e) => self.path_to_string(e),

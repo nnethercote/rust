@@ -262,9 +262,6 @@ impl TokenCursor {
     #[inline(always)]
     fn inlined_next(&mut self, desugar_doc_comments: bool) -> (Token, Spacing) {
         loop {
-            // FIXME: we currently don't return `Delimiter` open/close delims. To fix #67062 we will
-            // need to, whereupon the `delim != Delimiter::Invisible` conditions below can be
-            // removed.
             if let Some((tree, spacing)) = self.frame.tree_cursor.next_with_spacing_ref() {
                 match tree {
                     &TokenTree::Token(ref token) => match (desugar_doc_comments, token) {
@@ -1477,8 +1474,10 @@ pub enum FlatToken {
     Empty,
 }
 
+// njn: rename
 #[derive(Debug)]
 pub enum NtOrTt {
     Nt(Nonterminal),
     Tt(TokenTree),
+    Expr(P<Expr>),
 }

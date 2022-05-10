@@ -13,7 +13,7 @@ use rustc_data_structures::sync::{self, Lrc};
 use rustc_errors::{Applicability, DiagnosticBuilder, ErrorGuaranteed, MultiSpan, PResult};
 use rustc_lint_defs::builtin::PROC_MACRO_BACK_COMPAT;
 use rustc_lint_defs::BuiltinLintDiagnostics;
-use rustc_parse::{self, nt_to_tokenstream, parser, MACRO_ARGUMENTS};
+use rustc_parse::{self, expr_to_tokenstream, nt_to_tokenstream, parser, MACRO_ARGUMENTS};
 use rustc_session::{parse::ParseSess, Limit, Session};
 use rustc_span::def_id::{CrateNum, DefId, LocalDefId};
 use rustc_span::edition::Edition;
@@ -119,8 +119,8 @@ impl Annotatable {
                 token::NtItem(P(item.and_then(ast::ForeignItem::into_item)))
             }
             Annotatable::Stmt(stmt) => token::NtStmt(stmt),
-            Annotatable::Expr(expr) => token::NtExpr(expr),
-            Annotatable::Arm(..)
+            Annotatable::Expr(..)
+            | Annotatable::Arm(..)
             | Annotatable::ExprField(..)
             | Annotatable::PatField(..)
             | Annotatable::GenericParam(..)
@@ -131,8 +131,11 @@ impl Annotatable {
         }
     }
 
-    crate fn into_tokens(self, sess: &ParseSess) -> TokenStream {
-        nt_to_tokenstream(&self.into_nonterminal(), sess, CanSynthesizeMissingTokens::No)
+    pub fn into_tokens(self, sess: &ParseSess) -> TokenStream {
+        match self {
+            Annotatable::Expr(expr) => expr_to_tokenstream(&expr, sess, CanSynthesizeMissingTokens::No),
+            _ => nt_to_tokenstream(&self.into_nonterminal(), sess, CanSynthesizeMissingTokens::No),
+        }
     }
 
     pub fn expect_item(self) -> P<ast::Item> {

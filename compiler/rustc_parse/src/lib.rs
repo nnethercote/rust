@@ -290,21 +290,41 @@ pub fn nt_to_tokenstream(
         Nonterminal::NtMeta(ref attr) => convert_tokens(attr.tokens.as_ref()),
         Nonterminal::NtPath(ref path) => convert_tokens(path.tokens.as_ref()),
         Nonterminal::NtVis(ref vis) => convert_tokens(vis.tokens.as_ref()),
-        Nonterminal::NtExpr(ref expr) | Nonterminal::NtLiteral(ref expr) => {
+        Nonterminal::NtLiteral(ref expr) => {
             prepend_attrs(&expr.attrs, expr.tokens.as_ref())
         }
     };
 
     if let Some(tokens) = tokens {
-        return tokens;
+        tokens
     } else if matches!(synthesize_tokens, CanSynthesizeMissingTokens::Yes) {
-        return fake_token_stream(sess, nt);
+        fake_token_stream(sess, nt)
     } else {
         panic!(
             "Missing tokens for nt {:?} at {:?}: {:?}",
             nt,
             nt.span(),
             pprust::nonterminal_to_string(nt)
+        );
+    }
+}
+
+// njn: comments
+pub fn expr_to_tokenstream(
+    expr: &ast::Expr,
+    sess: &ParseSess,
+    synthesize_tokens: CanSynthesizeMissingTokens,
+) -> TokenStream {
+    if let Some(tokens) = prepend_attrs(&expr.attrs, expr.tokens.as_ref()) {
+        tokens
+    } else if matches!(synthesize_tokens, CanSynthesizeMissingTokens::Yes) {
+        fake_token_stream_expr(sess, expr)
+    } else {
+        panic!(
+            "Missing tokens for expr {:?} at {:?}: {:?}",
+            expr,
+            expr.span,
+            pprust::expr_to_string(expr)
         );
     }
 }
@@ -326,6 +346,12 @@ pub fn fake_token_stream(sess: &ParseSess, nt: &Nonterminal) -> TokenStream {
     let source = pprust::nonterminal_to_string(nt);
     let filename = FileName::macro_expansion_source_code(&source);
     parse_stream_from_source_str(filename, source, sess, Some(nt.span()))
+}
+
+pub fn fake_token_stream_expr(sess: &ParseSess, expr: &ast::Expr) -> TokenStream {
+    let source = pprust::expr_to_string(expr);
+    let filename = FileName::macro_expansion_source_code(&source);
+    parse_stream_from_source_str(filename, source, sess, Some(expr.span))
 }
 
 pub fn fake_token_stream_for_crate(sess: &ParseSess, krate: &ast::Crate) -> TokenStream {

@@ -173,13 +173,7 @@ impl CfgEval<'_, '_> {
             }
             _ => unreachable!(),
         };
-        let nt = annotatable.into_nonterminal();
-
-        let mut orig_tokens = rustc_parse::nt_to_tokenstream(
-            &nt,
-            &self.cfg.sess.parse_sess,
-            CanSynthesizeMissingTokens::No,
-        );
+        let mut orig_tokens = annotatable.into_tokens(&self.cfg.sess.parse_sess);
 
         // 'Flatten' all nonterminals (i.e. `TokenKind::Interpolated`)
         // to `None`-delimited groups containing the corresponding tokens. This

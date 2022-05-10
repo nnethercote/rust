@@ -379,7 +379,7 @@ impl Token {
         match self.uninterpolate().kind {
             Ident(name, is_raw)              =>
                 ident_can_begin_expr(name, self.span, is_raw), // value name or keyword
-            OpenDelim(..)                     | // tuple, array or block
+            OpenDelim(..)                     | // tuple, array, block, or macro output
             Literal(..)                       | // literal
             Not                               | // operator not
             BinOp(Minus)                      | // unary minus
@@ -394,7 +394,6 @@ impl Token {
             Lifetime(..)                      | // labeled loop
             Pound                             => true, // expression attributes
             Interpolated(ref nt) => matches!(**nt, NtLiteral(..) |
-                NtExpr(..)    |
                 NtBlock(..)   |
                 NtPath(..)),
             _ => false,
@@ -424,8 +423,8 @@ impl Token {
     /// Returns `true` if the token can appear at the start of a const param.
     pub fn can_begin_const_arg(&self) -> bool {
         match self.kind {
-            OpenDelim(Delimiter::Brace) => true,
-            Interpolated(ref nt) => matches!(**nt, NtExpr(..) | NtBlock(..) | NtLiteral(..)),
+            OpenDelim(Delimiter::Brace | Delimiter::Invisible { .. }) => true,
+            Interpolated(ref nt) => matches!(**nt, NtBlock(..) | NtLiteral(..)),
             _ => self.can_begin_literal_maybe_minus(),
         }
     }
@@ -454,17 +453,8 @@ impl Token {
         match self.uninterpolate().kind {
             Literal(..) | BinOp(Minus) => true,
             Ident(name, false) if name.is_bool_lit() => true,
-            Interpolated(ref nt) => match &**nt {
-                NtLiteral(_) => true,
-                NtExpr(e) => match &e.kind {
-                    ast::ExprKind::Lit(_) => true,
-                    ast::ExprKind::Unary(ast::UnOp::Neg, e) => {
-                        matches!(&e.kind, ast::ExprKind::Lit(_))
-                    }
-                    _ => false,
-                },
-                _ => false,
-            },
+            OpenDelim(Delimiter::Invisible { .. }) => true,
+            Interpolated(ref nt) => matches!(**nt, NtLiteral(_)),
             _ => false,
         }
     }
@@ -541,9 +531,10 @@ impl Token {
     /// Would `maybe_whole_expr` in `parser.rs` return `Ok(..)`?
     /// That is, is this a pre-parsed expression dropped into the token stream
     /// (which happens while parsing the result of macro expansion)?
+    // njn: need to do anything with this?
     pub fn is_whole_expr(&self) -> bool {
         if let Interpolated(ref nt) = self.kind
-            && let NtExpr(_) | NtLiteral(_) | NtPath(_) | NtBlock(_) = **nt
+            && let NtLiteral(_) | NtPath(_) | NtBlock(_) = **nt
         {
             return true;
         }
@@ -699,7 +690,6 @@ pub enum Nonterminal {
     NtBlock(P<ast::Block>),
     NtStmt(P<ast::Stmt>),
     NtPat(P<ast::Pat>),
-    NtExpr(P<ast::Expr>),
     NtTy(P<ast::Ty>),
     NtIdent(Ident, /* is_raw */ bool),
     NtLifetime(Ident),
@@ -799,7 +789,7 @@ impl Nonterminal {
             NtBlock(block) => block.span,
             NtStmt(stmt) => stmt.span,
             NtPat(pat) => pat.span,
-            NtExpr(expr) | NtLiteral(expr) => expr.span,
+            NtLiteral(expr) => expr.span,
             NtTy(ty) => ty.span,
             NtIdent(ident, _) | NtLifetime(ident) => ident.span,
             NtMeta(attr_item) => attr_item.span(),
@@ -832,7 +822,6 @@ impl fmt::Debug for Nonterminal {
             NtBlock(..) => f.pad("NtBlock(..)"),
             NtStmt(..) => f.pad("NtStmt(..)"),
             NtPat(..) => f.pad("NtPat(..)"),
-            NtExpr(..) => f.pad("NtExpr(..)"),
             NtTy(..) => f.pad("NtTy(..)"),
             NtIdent(..) => f.pad("NtIdent(..)"),
             NtLiteral(..) => f.pad("NtLiteral(..)"),
