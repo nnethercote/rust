@@ -170,7 +170,12 @@ impl MultiItemModifier for DeriveProcMacro {
                 Ok(None) => break,
                 Ok(Some(item)) => {
                     if is_stmt {
-                        items.push(Annotatable::Stmt(P(ecx.stmt_item(span, item))));
+                        let stmt_item = P(ast::Stmt {
+                            id: ast::DUMMY_NODE_ID,
+                            kind: ast::StmtKind::Item(item),
+                            span,
+                        });
+                        items.push(Annotatable::Stmt(stmt_item));
                     } else {
                         items.push(Annotatable::Item(item));
                     }

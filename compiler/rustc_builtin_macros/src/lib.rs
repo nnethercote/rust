@@ -26,6 +26,7 @@ use rustc_span::symbol::sym;
 
 mod alloc_error_handler;
 mod assert;
+mod build;
 mod cfg;
 mod cfg_accessible;
 mod cfg_eval;

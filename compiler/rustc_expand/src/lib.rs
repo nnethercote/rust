@@ -17,7 +17,6 @@
 
 extern crate proc_macro as pm;
 
-mod build;
 mod errors;
 // FIXME(Nilstrieb) Translate macro_rules diagnostics
 #[allow(rustc::untranslatable_diagnostic)]
