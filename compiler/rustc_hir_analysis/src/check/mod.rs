@@ -431,7 +431,7 @@ fn fn_sig_suggestion<'tcx>(
                 }
             })
         })
-        .chain(std::iter::once(if sig.c_variadic { Some("...".to_string()) } else { None }))
+        .chain(std::iter::once(if sig.csa.c_variadic { Some("...".to_string()) } else { None }))
         .flatten()
         .collect::<Vec<String>>()
         .join(", ");
@@ -463,7 +463,7 @@ fn fn_sig_suggestion<'tcx>(
 
     let output = if !output.is_unit() { format!(" -> {output}") } else { String::new() };
 
-    let safety = sig.safety.prefix_str();
+    let safety = sig.csa.safety.prefix_str();
     let (generics, where_clauses) = bounds_from_generic_predicates(tcx, predicates);
 
     // FIXME: this is not entirely correct, as the lifetimes from borrowed params will

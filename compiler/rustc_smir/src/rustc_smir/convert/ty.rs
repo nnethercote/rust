@@ -213,9 +213,9 @@ impl<'tcx> Stable<'tcx> for ty::FnSig<'tcx> {
 
         FnSig {
             inputs_and_output: self.inputs_and_output.iter().map(|ty| ty.stable(tables)).collect(),
-            c_variadic: self.c_variadic,
-            safety: self.safety.stable(tables),
-            abi: self.abi.stable(tables),
+            c_variadic: self.csa.c_variadic,
+            safety: self.csa.safety.stable(tables),
+            abi: self.csa.abi.stable(tables),
         }
     }
 }

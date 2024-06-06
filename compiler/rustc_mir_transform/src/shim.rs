@@ -897,7 +897,7 @@ fn build_call_shim<'tcx>(
     let mut body =
         new_body(MirSource::from_instance(instance), blocks, local_decls, sig.inputs().len(), span);
 
-    if let Abi::RustCall = sig.abi {
+    if let Abi::RustCall = sig.csa.abi {
         body.spread_arg = Some(Local::new(sig.inputs().len()));
     }
 

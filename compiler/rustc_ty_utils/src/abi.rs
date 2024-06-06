@@ -96,9 +96,9 @@ fn fn_sig_for_fn_abi<'tcx>(
                 tcx.mk_fn_sig(
                     iter::once(env_ty).chain(sig.inputs().iter().cloned()),
                     sig.output(),
-                    sig.c_variadic,
-                    sig.safety,
-                    sig.abi,
+                    sig.csa.c_variadic,
+                    sig.csa.safety,
+                    sig.csa.abi,
                 ),
                 bound_vars,
             )
@@ -582,11 +582,11 @@ fn fn_abi_new_uncached<'tcx>(
 ) -> Result<&'tcx FnAbi<'tcx, Ty<'tcx>>, &'tcx FnAbiError<'tcx>> {
     let sig = cx.tcx.normalize_erasing_late_bound_regions(cx.param_env, sig);
 
-    let conv = conv_from_spec_abi(cx.tcx(), sig.abi, sig.c_variadic);
+    let conv = conv_from_spec_abi(cx.tcx(), sig.csa.abi, sig.csa.c_variadic);
 
     let mut inputs = sig.inputs();
-    let extra_args = if sig.abi == RustCall {
-        assert!(!sig.c_variadic && extra_args.is_empty());
+    let extra_args = if sig.csa.abi == RustCall {
+        assert!(!sig.csa.c_variadic && extra_args.is_empty());
 
         if let Some(input) = sig.inputs().last() {
             if let ty::Tuple(tupled_arguments) = input.kind() {
@@ -605,7 +605,7 @@ fn fn_abi_new_uncached<'tcx>(
             );
         }
     } else {
-        assert!(sig.c_variadic || extra_args.is_empty());
+        assert!(sig.csa.c_variadic || extra_args.is_empty());
         extra_args
     };
 
@@ -619,7 +619,7 @@ fn fn_abi_new_uncached<'tcx>(
     let linux_powerpc_gnu_like =
         target.os == "linux" && target.arch == "powerpc" && target_env_gnu_like;
     use SpecAbi::*;
-    let rust_abi = matches!(sig.abi, RustIntrinsic | Rust | RustCall);
+    let rust_abi = matches!(sig.csa.abi, RustIntrinsic | Rust | RustCall);
 
     let is_drop_in_place =
         fn_def_id.is_some() && fn_def_id == cx.tcx.lang_items().drop_in_place_fn();
@@ -687,14 +687,14 @@ fn fn_abi_new_uncached<'tcx>(
             .enumerate()
             .map(|(i, ty)| arg_of(ty, Some(i)))
             .collect::<Result<_, _>>()?,
-        c_variadic: sig.c_variadic,
+        c_variadic: sig.csa.c_variadic,
         fixed_count: inputs.len() as u32,
         conv,
-        can_unwind: fn_can_unwind(cx.tcx(), fn_def_id, sig.abi),
+        can_unwind: fn_can_unwind(cx.tcx(), fn_def_id, sig.csa.abi),
     };
-    fn_abi_adjust_for_abi(cx, &mut fn_abi, sig.abi, fn_def_id)?;
+    fn_abi_adjust_for_abi(cx, &mut fn_abi, sig.csa.abi, fn_def_id)?;
     debug!("fn_abi_new_uncached = {:?}", fn_abi);
-    fn_abi_sanity_check(cx, &fn_abi, sig.abi);
+    fn_abi_sanity_check(cx, &fn_abi, sig.csa.abi);
     Ok(cx.tcx.arena.alloc(fn_abi))
 }
 

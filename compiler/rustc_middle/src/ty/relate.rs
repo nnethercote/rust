@@ -144,11 +144,14 @@ impl<'tcx> Relate<'tcx> for ty::FnSig<'tcx> {
     ) -> RelateResult<'tcx, ty::FnSig<'tcx>> {
         let tcx = relation.tcx();
 
-        if a.c_variadic != b.c_variadic {
-            return Err(TypeError::VariadicMismatch(expected_found(a.c_variadic, b.c_variadic)));
+        if a.csa.c_variadic != b.csa.c_variadic {
+            return Err(TypeError::VariadicMismatch(expected_found(
+                a.csa.c_variadic,
+                b.csa.c_variadic,
+            )));
         }
-        let safety = relation.relate(a.safety, b.safety)?;
-        let abi = relation.relate(a.abi, b.abi)?;
+        let safety = relation.relate(a.csa.safety, b.csa.safety)?;
+        let abi = relation.relate(a.csa.abi, b.csa.abi)?;
 
         if a.inputs().len() != b.inputs().len() {
             return Err(TypeError::ArgCount);
@@ -181,9 +184,8 @@ impl<'tcx> Relate<'tcx> for ty::FnSig<'tcx> {
             });
         Ok(ty::FnSig {
             inputs_and_output: tcx.mk_type_list_from_iter(inputs_and_output)?,
-            c_variadic: a.c_variadic,
-            safety,
-            abi,
+            // njn: qual
+            csa: crate::ty::Csa { c_variadic: a.csa.c_variadic, safety, abi },
         })
     }
 }

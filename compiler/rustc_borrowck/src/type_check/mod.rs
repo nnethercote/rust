@@ -1597,7 +1597,9 @@ impl<'a, 'tcx> TypeChecker<'a, 'tcx> {
         term_location: Location,
         call_source: CallSource,
     ) {
-        if args.len() < sig.inputs().len() || (args.len() > sig.inputs().len() && !sig.c_variadic) {
+        if args.len() < sig.inputs().len()
+            || (args.len() > sig.inputs().len() && !sig.csa.c_variadic)
+        {
             span_mirbug!(self, term, "call to {:?} with wrong # of args", sig);
         }
 

@@ -1600,7 +1600,7 @@ fn check_fn_or_method<'tcx>(
 
     check_where_clauses(wfcx, span, def_id);
 
-    if sig.abi == Abi::RustCall {
+    if sig.csa.abi == Abi::RustCall {
         let span = tcx.def_span(def_id);
         let has_implicit_self = hir_decl.implicit_self != hir::ImplicitSelfKind::None;
         let mut inputs = sig.inputs().iter().skip(if has_implicit_self { 1 } else { 0 });

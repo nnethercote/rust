@@ -2035,7 +2035,14 @@ impl<'tcx> TyCtxt<'tcx> {
     /// unsafe.
     pub fn safe_to_unsafe_fn_ty(self, sig: PolyFnSig<'tcx>) -> Ty<'tcx> {
         assert_eq!(sig.safety(), hir::Safety::Safe);
-        Ty::new_fn_ptr(self, sig.map_bound(|sig| ty::FnSig { safety: hir::Safety::Unsafe, ..sig }))
+        Ty::new_fn_ptr(
+            self,
+            sig.map_bound(|sig| ty::FnSig {
+                inputs_and_output: sig.inputs_and_output,
+                // njn: qual
+                csa: crate::ty::Csa { safety: hir::Safety::Unsafe, ..sig.csa },
+            }),
+        )
     }
 
     /// Given the def_id of a Trait `trait_def_id` and the name of an associated item `assoc_name`
@@ -2101,7 +2108,7 @@ impl<'tcx> TyCtxt<'tcx> {
                 ty::Tuple(params) => *params,
                 _ => bug!(),
             };
-            self.mk_fn_sig(params, s.output(), s.c_variadic, safety, abi::Abi::Rust)
+            self.mk_fn_sig(params, s.output(), s.csa.c_variadic, safety, abi::Abi::Rust)
         })
     }
 
@@ -2377,9 +2384,8 @@ impl<'tcx> TyCtxt<'tcx> {
     {
         T::collect_and_apply(inputs.into_iter().chain(iter::once(output)), |xs| ty::FnSig {
             inputs_and_output: self.mk_type_list(xs),
-            c_variadic,
-            safety,
-            abi,
+            // njn: qual
+            csa: crate::ty::Csa { c_variadic, safety, abi },
         })
     }
 

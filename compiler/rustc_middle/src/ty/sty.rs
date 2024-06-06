@@ -1195,9 +1195,12 @@ impl<'tcx> Ty<'tcx> {
                 // ignore errors (#54954)
                 Binder::dummy(ty::FnSig {
                     inputs_and_output: ty::List::empty(),
-                    c_variadic: false,
-                    safety: hir::Safety::Safe,
-                    abi: abi::Abi::Rust,
+                    // njn: qual
+                    csa: crate::ty::Csa {
+                        c_variadic: false,
+                        safety: hir::Safety::Safe,
+                        abi: abi::Abi::Rust,
+                    },
                 })
             }
             Closure(..) => bug!(

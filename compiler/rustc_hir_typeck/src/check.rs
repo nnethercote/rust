@@ -52,13 +52,13 @@ pub(super) fn check_fn<'a, 'tcx>(
 
     let span = body.value.span;
 
-    forbid_intrinsic_abi(tcx, span, fn_sig.abi);
+    forbid_intrinsic_abi(tcx, span, fn_sig.csa.abi);
 
     GatherLocalsVisitor::new(fcx).visit_body(body);
 
     // C-variadic fns also have a `VaList` input that's not listed in `fn_sig`
     // (as it's created inside the body itself, not passed in from outside).
-    let maybe_va_list = fn_sig.c_variadic.then(|| {
+    let maybe_va_list = fn_sig.csa.c_variadic.then(|| {
         let span = body.params.last().unwrap().span;
         let va_list_did = tcx.require_lang_item(LangItem::VaList, Some(span));
         let region = fcx.next_region_var(RegionVariableOrigin::MiscVariable(span));
@@ -216,7 +216,7 @@ fn check_panic_info_fn(tcx: TyCtxt<'_>, fn_id: LocalDefId, fn_sig: ty::FnSig<'_>
         ty::BoundVariableKind::Region(ty::BrAnon),
     ]);
     let expected_sig = ty::Binder::bind_with_vars(
-        tcx.mk_fn_sig([panic_info_ref_ty], tcx.types.never, false, fn_sig.safety, Abi::Rust),
+        tcx.mk_fn_sig([panic_info_ref_ty], tcx.types.never, false, fn_sig.csa.safety, Abi::Rust),
         bounds,
     );
 
@@ -251,7 +251,7 @@ fn check_lang_start_fn<'tcx>(tcx: TyCtxt<'tcx>, fn_sig: ty::FnSig<'tcx>, def_id:
         ],
         tcx.types.isize,
         false,
-        fn_sig.safety,
+        fn_sig.csa.safety,
         Abi::Rust,
     ));
 

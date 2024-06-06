@@ -1094,16 +1094,16 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
 
         // unsafe extern "C" for<'a> fn(&'a T) -> &'a T
         // ^^^^^^
-        values.0.push(sig1.safety.prefix_str(), sig1.safety != sig2.safety);
-        values.1.push(sig2.safety.prefix_str(), sig1.safety != sig2.safety);
+        values.0.push(sig1.csa.safety.prefix_str(), sig1.csa.safety != sig2.csa.safety);
+        values.1.push(sig2.csa.safety.prefix_str(), sig1.csa.safety != sig2.csa.safety);
 
         // unsafe extern "C" for<'a> fn(&'a T) -> &'a T
         //        ^^^^^^^^^^
-        if sig1.abi != abi::Abi::Rust {
-            values.0.push(format!("extern {} ", sig1.abi), sig1.abi != sig2.abi);
+        if sig1.csa.abi != abi::Abi::Rust {
+            values.0.push(format!("extern {} ", sig1.csa.abi), sig1.csa.abi != sig2.csa.abi);
         }
-        if sig2.abi != abi::Abi::Rust {
-            values.1.push(format!("extern {} ", sig2.abi), sig1.abi != sig2.abi);
+        if sig2.csa.abi != abi::Abi::Rust {
+            values.1.push(format!("extern {} ", sig2.csa.abi), sig1.csa.abi != sig2.csa.abi);
         }
 
         // unsafe extern "C" for<'a> fn(&'a T) -> &'a T
@@ -1143,17 +1143,17 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
             }
         }
 
-        if sig1.c_variadic {
+        if sig1.csa.c_variadic {
             if len1 > 0 {
                 values.0.push_normal(", ");
             }
-            values.0.push("...", !sig2.c_variadic);
+            values.0.push("...", !sig2.csa.c_variadic);
         }
-        if sig2.c_variadic {
+        if sig2.csa.c_variadic {
             if len2 > 0 {
                 values.1.push_normal(", ");
             }
-            values.1.push("...", !sig1.c_variadic);
+            values.1.push("...", !sig1.csa.c_variadic);
         }
 
         // unsafe extern "C" for<'a> fn(&'a T) -> &'a T

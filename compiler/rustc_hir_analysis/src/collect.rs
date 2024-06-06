@@ -1419,9 +1419,9 @@ fn infer_return_ty_for_fn_sig<'tcx>(
             ty::Binder::dummy(tcx.mk_fn_sig(
                 fn_sig.inputs().iter().copied(),
                 recovered_ret_ty.unwrap_or_else(|| Ty::new_error(tcx, guar)),
-                fn_sig.c_variadic,
-                fn_sig.safety,
-                fn_sig.abi,
+                fn_sig.csa.c_variadic,
+                fn_sig.csa.safety,
+                fn_sig.csa.abi,
             ))
         }
         None => icx.lowerer().lower_fn_ty(

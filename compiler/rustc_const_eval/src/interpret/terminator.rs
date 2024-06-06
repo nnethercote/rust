@@ -157,7 +157,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 let destination = self.force_allocation(&self.eval_place(destination)?)?;
                 self.eval_fn_call(
                     fn_val,
-                    (fn_sig.abi, fn_abi),
+                    (fn_sig.csa.abi, fn_abi),
                     &args,
                     with_caller_location,
                     &destination,

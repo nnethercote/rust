@@ -1106,7 +1106,7 @@ impl<'a, 'tcx> MirBorrowckCtxt<'a, 'tcx> {
             ty::Binder::dummy(tcx.mk_fn_sig(
                 liberated_sig.inputs().iter().copied(),
                 peeled_ty,
-                liberated_sig.c_variadic,
+                liberated_sig.csa.c_variadic,
                 hir::Safety::Safe,
                 rustc_target::spec::abi::Abi::Rust,
             )),

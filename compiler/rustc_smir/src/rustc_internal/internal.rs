@@ -222,9 +222,12 @@ impl RustcInternal for FnSig {
     fn internal<'tcx>(&self, tables: &mut Tables<'_>, tcx: TyCtxt<'tcx>) -> Self::T<'tcx> {
         tcx.lift(rustc_ty::FnSig {
             inputs_and_output: tcx.mk_type_list(&self.inputs_and_output.internal(tables, tcx)),
-            c_variadic: self.c_variadic,
-            safety: self.safety.internal(tables, tcx),
-            abi: self.abi.internal(tables, tcx),
+            // njn: qual
+            csa: rustc_middle::ty::Csa {
+                c_variadic: self.c_variadic,
+                safety: self.safety.internal(tables, tcx),
+                abi: self.abi.internal(tables, tcx),
+            },
         })
         .unwrap()
     }

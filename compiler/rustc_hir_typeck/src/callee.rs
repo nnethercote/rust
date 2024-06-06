@@ -519,12 +519,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             fn_sig.inputs(),
             expected_arg_tys,
             arg_exprs,
-            fn_sig.c_variadic,
+            fn_sig.csa.c_variadic,
             TupleArgumentsFlag::DontTupleArguments,
             def_id,
         );
 
-        if fn_sig.abi == abi::Abi::RustCall {
+        if fn_sig.csa.abi == abi::Abi::RustCall {
             let sp = arg_exprs.last().map_or(call_expr.span, |expr| expr.span);
             if let Some(ty) = fn_sig.inputs().last().copied() {
                 self.register_bound(
@@ -883,7 +883,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             fn_sig.inputs(),
             expected_arg_tys,
             arg_exprs,
-            fn_sig.c_variadic,
+            fn_sig.csa.c_variadic,
             TupleArgumentsFlag::TupleArguments,
             Some(closure_def_id.to_def_id()),
         );
