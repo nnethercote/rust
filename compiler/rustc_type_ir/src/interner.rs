@@ -70,7 +70,6 @@ pub trait Interner:
     type Pat: Copy + Debug + Hash + Eq + DebugWithInfcx<Self>;
     type Safety: Safety<Self>; // njn: remove?
     type Abi: Abi<Self>; // njn: remove?
-    type Csa: Csa<Self>; // njn: remove?
     type FnSig: FnSig<Self>;
 
     // Kinds of consts
