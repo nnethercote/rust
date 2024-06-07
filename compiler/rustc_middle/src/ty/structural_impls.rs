@@ -13,7 +13,7 @@ use rustc_ast_ir::visit::VisitorResult;
 use rustc_hir::def::Namespace;
 use rustc_span::source_map::Spanned;
 use rustc_target::abi::TyAndLayout;
-use rustc_type_ir::inherent::Abi;
+use rustc_target::spec::abi::Abi;
 use rustc_type_ir::{ConstKind, DebugWithInfcx, InferCtxtLike, WithInfcx};
 
 use std::fmt::{self, Debug};
@@ -293,7 +293,7 @@ impl<'tcx> DebugWithInfcx<TyCtxt<'tcx>> for FnSig<'tcx> {
         let sig = this.data;
 
         write!(f, "{}", sig.safety.prefix_str())?;
-        if !sig.abi.is_rust() {
+        if sig.abi != Abi::Rust {
             write!(f, "extern \"{:?}\" ", sig.abi)?;
         }
 

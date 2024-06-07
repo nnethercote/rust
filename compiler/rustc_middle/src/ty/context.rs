@@ -69,7 +69,7 @@ use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::{Span, DUMMY_SP};
 use rustc_target::abi::{FieldIdx, Layout, LayoutS, TargetDataLayout, VariantIdx};
 use rustc_target::spec::abi;
-use rustc_type_ir::inherent::{Abi, Safety, Tys};
+use rustc_type_ir::inherent::Tys;
 use rustc_type_ir::TyKind::*;
 use rustc_type_ir::WithCachedTypeInfo;
 use rustc_type_ir::{CollectAndApply, Interner, TypeFlags};
@@ -235,22 +235,6 @@ impl<'tcx> Interner for TyCtxt<'tcx> {
     }
 }
 
-impl<'tcx> rustc_type_ir::inherent::Abi<TyCtxt<'tcx>> for abi::Abi {
-    fn is_rust(self) -> bool {
-        matches!(self, abi::Abi::Rust)
-    }
-}
-
-impl<'tcx> rustc_type_ir::inherent::Safety<TyCtxt<'tcx>> for hir::Safety {
-    fn is_safe(self) -> bool {
-        matches!(self, hir::Safety::Safe)
-    }
-
-    fn prefix_str(self) -> &'static str {
-        self.prefix_str()
-    }
-}
-
 impl<'tcx> rustc_type_ir::inherent::FnSig<TyCtxt<'tcx>> for ty::FnSig<'tcx> {
     fn inputs_and_output(self) -> &'tcx List<Ty<'tcx>> {
         self.inputs_and_output
@@ -277,7 +261,7 @@ impl<'tcx> rustc_type_ir::inherent::FnSig<TyCtxt<'tcx>> for ty::FnSig<'tcx> {
     }
 
     fn is_fn_trait_compatible(self) -> bool {
-        !self.c_variadic && self.safety.is_safe() && self.abi.is_rust()
+        !self.c_variadic && self.safety == hir::Safety::Safe && self.abi == abi::Abi::Rust
     }
 }
 

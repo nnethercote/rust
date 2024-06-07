@@ -66,18 +66,6 @@ pub trait Tys<I: Interner<Tys = Self>>:
     fn output(self) -> I::Ty;
 }
 
-pub trait Abi<I: Interner<Abi = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
-    /// Whether this ABI is `extern "Rust"`.
-    fn is_rust(self) -> bool;
-}
-
-pub trait Safety<I: Interner<Safety = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
-    // njn: remove some/all of these?
-    fn is_safe(self) -> bool;
-
-    fn prefix_str(self) -> &'static str;
-}
-
 pub trait FnSig<I: Interner<FnSig = Self>>:
     Copy + DebugWithInfcx<I> + Hash + Eq + TypeVisitable<I>
 {

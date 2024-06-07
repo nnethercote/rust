@@ -68,8 +68,8 @@ pub trait Interner:
     type BoundExistentialPredicates: Copy + DebugWithInfcx<Self> + Hash + Eq;
     type AllocId: Copy + Debug + Hash + Eq;
     type Pat: Copy + Debug + Hash + Eq + DebugWithInfcx<Self>;
-    type Safety: Safety<Self>; // njn: remove?
-    type Abi: Abi<Self>; // njn: remove?
+    type Safety: Copy + Debug + Hash + Eq + TypeVisitable<Self>;
+    type Abi: Copy + Debug + Hash + Eq + TypeVisitable<Self>;
     type FnSig: FnSig<Self>;
 
     // Kinds of consts

@@ -31,6 +31,7 @@ impl<'tcx> FnSig<'tcx> {
 }
 
 // njn: can I auto-derive this somehow?
+// njn: move?
 impl<'a, 'tcx> Lift<TyCtxt<'tcx>> for FnSig<'a> {
     type Lifted = FnSig<'tcx>;
 
