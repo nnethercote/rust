@@ -67,7 +67,6 @@ pub trait Tys<I: Interner<Tys = Self>>:
 }
 
 pub trait Abi<I: Interner<Abi = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
-    // njn: remove some/all of these?
     /// Whether this ABI is `extern "Rust"`.
     fn is_rust(self) -> bool;
 }
@@ -82,9 +81,6 @@ pub trait Safety<I: Interner<Safety = Self>>: Copy + Debug + Hash + Eq + TypeVis
 pub trait FnSig<I: Interner<FnSig = Self>>:
     Copy + DebugWithInfcx<I> + Hash + Eq + TypeVisitable<I>
 {
-    // njn: what in here?
-
-    // njn: needed as well as inputs/output?
     fn inputs_and_output(self) -> I::Tys;
 
     fn inputs(self) -> I::FnInputTys;

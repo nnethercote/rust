@@ -37,7 +37,6 @@ use super::GenericParamDefKind;
 pub type TyKind<'tcx> = ir::TyKind<TyCtxt<'tcx>>;
 pub type TypeAndMut<'tcx> = ir::TypeAndMut<TyCtxt<'tcx>>;
 pub type AliasTy<'tcx> = ir::AliasTy<TyCtxt<'tcx>>;
-//pub type FnSig<'tcx> = ir::FnSig<TyCtxt<'tcx>>; // njn: remove
 pub type Binder<'tcx, T> = ir::Binder<TyCtxt<'tcx>, T>;
 pub type EarlyBinder<'tcx, T> = ir::EarlyBinder<TyCtxt<'tcx>, T>;
 
