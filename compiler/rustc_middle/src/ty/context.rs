@@ -69,6 +69,7 @@ use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::{Span, DUMMY_SP};
 use rustc_target::abi::{FieldIdx, Layout, LayoutS, TargetDataLayout, VariantIdx};
 use rustc_target::spec::abi;
+use rustc_type_ir::inherent::{Abi, Safety, Tys};
 use rustc_type_ir::TyKind::*;
 use rustc_type_ir::WithCachedTypeInfo;
 use rustc_type_ir::{CollectAndApply, Interner, TypeFlags};
@@ -119,6 +120,7 @@ impl<'tcx> Interner for TyCtxt<'tcx> {
     type Safety = hir::Safety;
     type Abi = abi::Abi;
     type Csa = ty::Csa<'tcx>;
+    type FnSig = ty::FnSig<'tcx>;
 
     type Const = ty::Const<'tcx>;
     type PlaceholderConst = ty::PlaceholderConst;
@@ -265,6 +267,36 @@ impl<'tcx> rustc_type_ir::inherent::Csa<TyCtxt<'tcx>> for ty::Csa<'tcx> {
 
     fn abi(self) -> abi::Abi {
         self.abi
+    }
+}
+
+impl<'tcx> rustc_type_ir::inherent::FnSig<TyCtxt<'tcx>> for ty::FnSig<'tcx> {
+    fn inputs_and_output(self) -> &'tcx List<Ty<'tcx>> {
+        self.csa.inputs_and_output
+    }
+
+    fn inputs(self) -> &'tcx [Ty<'tcx>] {
+        self.csa.inputs_and_output.inputs()
+    }
+
+    fn output(self) -> Ty<'tcx> {
+        self.csa.inputs_and_output.output()
+    }
+
+    fn c_variadic(self) -> bool {
+        self.csa.c_variadic
+    }
+
+    fn safety(self) -> hir::Safety {
+        self.csa.safety
+    }
+
+    fn abi(self) -> abi::Abi {
+        self.csa.abi
+    }
+
+    fn is_fn_trait_compatible(self) -> bool {
+        !self.csa.c_variadic && self.csa.safety.is_safe() && self.csa.abi.is_rust()
     }
 }
 

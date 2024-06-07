@@ -23,7 +23,6 @@ pub trait Interner:
     + IrPrint<ty::NormalizesTo<Self>>
     + IrPrint<ty::SubtypePredicate<Self>>
     + IrPrint<ty::CoercePredicate<Self>>
-    + IrPrint<ty::FnSig<Self>>
 {
     type DefId: Copy + Debug + Hash + Eq + TypeVisitable<Self>;
     type AdtDef: Copy + Debug + Hash + Eq;
@@ -71,7 +70,8 @@ pub trait Interner:
     type Pat: Copy + Debug + Hash + Eq + DebugWithInfcx<Self>;
     type Safety: Safety<Self>; // njn: remove?
     type Abi: Abi<Self>; // njn: remove?
-    type Csa: Csa<Self>;
+    type Csa: Csa<Self>; // njn: remove?
+    type FnSig: FnSig<Self>;
 
     // Kinds of consts
     type Const: Const<Self>;

@@ -202,7 +202,7 @@ impl<I: Interner> ClosureArgs<I> {
     }
 
     /// Extracts the signature from the closure.
-    pub fn sig(self) -> ty::Binder<I, ty::FnSig<I>> {
+    pub fn sig(self) -> ty::Binder<I, I::FnSig> {
         match self.sig_as_fn_ptr_ty().kind() {
             ty::FnPtr(sig) => sig,
             ty => panic!("closure_sig_as_fn_ptr_ty is not a fn-ptr: {ty:?}"),
@@ -319,9 +319,9 @@ impl<I: Interner> CoroutineClosureArgs<I> {
                 resume_ty,
                 yield_ty,
                 return_ty,
-                c_variadic: sig.csa.c_variadic(),
-                safety: sig.csa.safety(),
-                abi: sig.csa.abi(),
+                c_variadic: sig.c_variadic(),
+                safety: sig.safety(),
+                abi: sig.abi(),
             }
         })
     }

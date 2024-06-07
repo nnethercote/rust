@@ -79,6 +79,7 @@ pub trait Safety<I: Interner<Safety = Self>>: Copy + Debug + Hash + Eq + TypeVis
     fn prefix_str(self) -> &'static str;
 }
 
+// njn: remove eventually?
 pub trait Csa<I: Interner<Csa = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
     // njn: what in here?
 
@@ -89,6 +90,27 @@ pub trait Csa<I: Interner<Csa = Self>>: Copy + Debug + Hash + Eq + TypeVisitable
     fn safety(self) -> I::Safety;
 
     fn abi(self) -> I::Abi;
+}
+
+pub trait FnSig<I: Interner<FnSig = Self>>:
+    Copy + DebugWithInfcx<I> + Hash + Eq + TypeVisitable<I>
+{
+    // njn: what in here?
+
+    // njn: needed as well as inputs/output?
+    fn inputs_and_output(self) -> I::Tys;
+
+    fn inputs(self) -> I::FnInputTys;
+
+    fn output(self) -> I::Ty;
+
+    fn c_variadic(self) -> bool;
+
+    fn safety(self) -> I::Safety;
+
+    fn abi(self) -> I::Abi;
+
+    fn is_fn_trait_compatible(self) -> bool;
 }
 
 pub trait Region<I: Interner<Region = Self>>:

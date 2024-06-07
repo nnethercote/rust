@@ -143,7 +143,7 @@ pub enum TyKind<I: Interner> {
     /// fn foo() -> i32 { 1 }
     /// let bar: fn() -> i32 = foo;
     /// ```
-    FnPtr(ty::Binder<I, FnSig<I>>),
+    FnPtr(ty::Binder<I, I::FnSig>),
 
     /// A trait object. Written as `dyn for<'b> Trait<'b, Assoc = u32> + Send + 'a`.
     Dynamic(I::BoundExistentialPredicates, I::Region, DynKind),
@@ -1002,36 +1002,7 @@ pub struct TypeAndMut<I: Interner> {
     pub mutbl: Mutability,
 }
 
-#[derive(derivative::Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Copy(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = ""),
-    Hash(bound = "")
-)]
-#[cfg_attr(feature = "nightly", derive(TyEncodable, TyDecodable, HashStable_NoContext))]
-#[derive(TypeVisitable_Generic, TypeFoldable_Generic, Lift_Generic)]
-pub struct FnSig<I: Interner> {
-    pub csa: I::Csa,
-}
-
-impl<I: Interner> FnSig<I> {
-    pub fn inputs(self) -> I::FnInputTys {
-        self.csa.inputs_and_output().inputs()
-    }
-
-    pub fn output(self) -> I::Ty {
-        self.csa.inputs_and_output().output()
-    }
-
-    pub fn is_fn_trait_compatible(self) -> bool {
-        let FnSig { csa } = self;
-        !csa.c_variadic() && csa.safety().is_safe() && csa.abi().is_rust()
-    }
-}
-
-impl<I: Interner> ty::Binder<I, FnSig<I>> {
+impl<I: Interner> ty::Binder<I, I::FnSig> {
     #[inline]
     pub fn inputs(self) -> ty::Binder<I, I::FnInputTys> {
         self.map_bound(|fn_sig| fn_sig.inputs())
@@ -1044,7 +1015,7 @@ impl<I: Interner> ty::Binder<I, FnSig<I>> {
     }
 
     pub fn inputs_and_output(self) -> ty::Binder<I, I::Tys> {
-        self.map_bound(|fn_sig| fn_sig.csa.inputs_and_output())
+        self.map_bound(|fn_sig| fn_sig.inputs_and_output())
     }
 
     #[inline]
@@ -1053,61 +1024,18 @@ impl<I: Interner> ty::Binder<I, FnSig<I>> {
     }
 
     pub fn c_variadic(self) -> bool {
-        self.skip_binder().csa.c_variadic()
+        self.skip_binder().c_variadic()
     }
 
     pub fn safety(self) -> I::Safety {
-        self.skip_binder().csa.safety()
+        self.skip_binder().safety()
     }
 
     pub fn abi(self) -> I::Abi {
-        self.skip_binder().csa.abi()
+        self.skip_binder().abi()
     }
 
     pub fn is_fn_trait_compatible(&self) -> bool {
         self.skip_binder().is_fn_trait_compatible()
-    }
-}
-
-impl<I: Interner> fmt::Debug for FnSig<I> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        WithInfcx::with_no_infcx(self).fmt(f)
-    }
-}
-impl<I: Interner> DebugWithInfcx<I> for FnSig<I> {
-    fn fmt<Infcx: InferCtxtLike<Interner = I>>(
-        this: WithInfcx<'_, Infcx, &Self>,
-        f: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        let sig = this.data;
-        let FnSig { csa } = sig;
-
-        write!(f, "{}", csa.safety().prefix_str())?;
-        if !csa.abi().is_rust() {
-            write!(f, "extern \"{:?}\" ", csa.abi())?;
-        }
-
-        write!(f, "fn(")?;
-        let inputs = sig.inputs();
-        for (i, ty) in inputs.iter().enumerate() {
-            if i > 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{:?}", &this.wrap(ty))?;
-        }
-        if csa.c_variadic() {
-            if inputs.is_empty() {
-                write!(f, "...")?;
-            } else {
-                write!(f, ", ...")?;
-            }
-        }
-        write!(f, ")")?;
-
-        let output = sig.output();
-        match output.kind() {
-            Tuple(list) if list.is_empty() => Ok(()),
-            _ => write!(f, " -> {:?}", &this.wrap(sig.output())),
-        }
     }
 }

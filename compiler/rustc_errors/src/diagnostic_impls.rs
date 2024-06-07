@@ -112,11 +112,12 @@ impl<I: rustc_type_ir::Interner> IntoDiagArg for rustc_type_ir::UnevaluatedConst
     }
 }
 
-impl<I: rustc_type_ir::Interner> IntoDiagArg for rustc_type_ir::FnSig<I> {
-    fn into_diag_arg(self) -> rustc_errors::DiagArgValue {
-        format!("{self:?}").into_diag_arg()
-    }
-}
+// njn: remove?
+// impl<I: rustc_type_ir::Interner> IntoDiagArg for rustc_type_ir::FnSig<I> {
+//     fn into_diag_arg(self) -> rustc_errors::DiagArgValue {
+//         format!("{self:?}").into_diag_arg()
+//     }
+// }
 
 impl<I: rustc_type_ir::Interner, T> IntoDiagArg for rustc_type_ir::Binder<I, T>
 where

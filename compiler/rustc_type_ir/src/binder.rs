@@ -5,7 +5,7 @@ use std::ops::{ControlFlow, Deref};
 
 #[cfg(feature = "nightly")]
 use rustc_macros::{HashStable_NoContext, TyDecodable, TyEncodable};
-use rustc_serialize::Decodable;
+//use rustc_serialize::Decodable;
 use tracing::debug;
 
 use crate::debug::{DebugWithInfcx, WithInfcx};
@@ -23,7 +23,7 @@ use crate::{self as ty, InferCtxtLike, Interner, SsoHashSet};
 /// type from `Binder<I, T>` to just `T` (see
 /// e.g., `liberate_late_bound_regions`).
 ///
-/// `Decodable` and `Encodable` are implemented for `Binder<T>` using the `impl_binder_encode_decode!` macro.
+/// `Decodable` and `Encodable` are implemented for `Binder<T>` using the `impl_binder_encode_decode!` macro. njn: ??
 #[derive(derivative::Derivative)]
 #[derivative(
     Clone(bound = "T: Clone"),
@@ -33,7 +33,7 @@ use crate::{self as ty, InferCtxtLike, Interner, SsoHashSet};
     Eq(bound = "T: Eq"),
     Debug(bound = "T: Debug")
 )]
-#[cfg_attr(feature = "nightly", derive(HashStable_NoContext))]
+#[cfg_attr(feature = "nightly", derive(TyEncodable, TyDecodable, HashStable_NoContext))]
 pub struct Binder<I: Interner, T> {
     value: T,
     bound_vars: I::BoundVarKinds,
@@ -68,40 +68,40 @@ impl<I: Interner, T: DebugWithInfcx<I>> DebugWithInfcx<I> for ty::Binder<I, T> {
     }
 }
 
-macro_rules! impl_binder_encode_decode {
-    ($($t:ty),+ $(,)?) => {
-        $(
-            impl<I: Interner, E: crate::TyEncoder<I = I>> rustc_serialize::Encodable<E> for ty::Binder<I, $t>
-            where
-                $t: rustc_serialize::Encodable<E>,
-                I::BoundVarKinds: rustc_serialize::Encodable<E>,
-            {
-                fn encode(&self, e: &mut E) {
-                    self.bound_vars().encode(e);
-                    self.as_ref().skip_binder().encode(e);
-                }
-            }
-            impl<I: Interner, D: crate::TyDecoder<I = I>> Decodable<D> for ty::Binder<I, $t>
-            where
-                $t: TypeVisitable<I> + rustc_serialize::Decodable<D>,
-                I::BoundVarKinds: rustc_serialize::Decodable<D>,
-            {
-                fn decode(decoder: &mut D) -> Self {
-                    let bound_vars = Decodable::decode(decoder);
-                    ty::Binder::bind_with_vars(<$t>::decode(decoder), bound_vars)
-                }
-            }
-        )*
-    }
-}
+// macro_rules! impl_binder_encode_decode {
+//     ($($t:ty),+ $(,)?) => {
+//         $(
+//             impl<I: Interner, E: crate::TyEncoder<I = I>> rustc_serialize::Encodable<E> for ty::Binder<I, $t>
+//             where
+//                 $t: rustc_serialize::Encodable<E>,
+//                 I::BoundVarKinds: rustc_serialize::Encodable<E>,
+//             {
+//                 fn encode(&self, e: &mut E) {
+//                     self.bound_vars().encode(e);
+//                     self.as_ref().skip_binder().encode(e);
+//                 }
+//             }
+//             impl<I: Interner, D: crate::TyDecoder<I = I>> Decodable<D> for ty::Binder<I, $t>
+//             where
+//                 $t: TypeVisitable<I> + rustc_serialize::Decodable<D>,
+//                 I::BoundVarKinds: rustc_serialize::Decodable<D>,
+//             {
+//                 fn decode(decoder: &mut D) -> Self {
+//                     let bound_vars = Decodable::decode(decoder);
+//                     ty::Binder::bind_with_vars(<$t>::decode(decoder), bound_vars)
+//                 }
+//             }
+//         )*
+//     }
+// }
 
-impl_binder_encode_decode! {
-    ty::FnSig<I>,
-    ty::TraitPredicate<I>,
-    ty::ExistentialPredicate<I>,
-    ty::TraitRef<I>,
-    ty::ExistentialTraitRef<I>,
-}
+// impl_binder_encode_decode! {
+//     //I::FnSig, // njn: ?
+//     ty::TraitPredicate<I>,
+//     ty::ExistentialPredicate<I>,
+//     ty::TraitRef<I>,
+//     ty::ExistentialTraitRef<I>,
+// }
 
 impl<I: Interner, T> Binder<I, T>
 where

@@ -7,13 +7,14 @@ use crate::mir::interpret;
 use crate::ty::fold::{FallibleTypeFolder, TypeFoldable, TypeSuperFoldable};
 use crate::ty::print::{with_no_trimmed_paths, FmtPrinter, Printer};
 use crate::ty::visit::{TypeSuperVisitable, TypeVisitable, TypeVisitor};
-use crate::ty::{self, InferConst, Lift, Term, TermKind, Ty, TyCtxt};
+use crate::ty::{self, FnSig, InferConst, Lift, Term, TermKind, Ty, TyCtxt};
 use rustc_ast_ir::try_visit;
 use rustc_ast_ir::visit::VisitorResult;
 use rustc_hir::def::Namespace;
 use rustc_span::source_map::Spanned;
 use rustc_target::abi::TyAndLayout;
 use rustc_type_ir::{ConstKind, DebugWithInfcx, InferCtxtLike, WithInfcx};
+use rustc_type_ir::inherent::Abi;
 
 use std::fmt::{self, Debug};
 
@@ -276,6 +277,62 @@ impl<'tcx> DebugWithInfcx<TyCtxt<'tcx>> for Region<'tcx> {
         f: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         write!(f, "{:?}", &this.map(|data| data.kind()))
+    }
+}
+
+impl<'tcx> fmt::Debug for FnSig<'tcx> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        WithInfcx::with_no_infcx(self).fmt(f)
+    }
+}
+impl<'tcx> DebugWithInfcx<TyCtxt<'tcx>> for FnSig<'tcx> {
+    fn fmt<Infcx: InferCtxtLike<Interner = TyCtxt<'tcx>>>(
+        this: WithInfcx<'_, Infcx, &Self>,
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        let sig = this.data;
+        let FnSig { csa } = sig;
+
+        write!(f, "{}", csa.safety.prefix_str())?;
+        if !csa.abi.is_rust() {
+            write!(f, "extern \"{:?}\" ", csa.abi)?;
+        }
+
+        write!(f, "fn(")?;
+        let inputs = sig.inputs();
+        for (i, ty) in inputs.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{:?}", &this.wrap(ty))?;                           
+        }                                                                 
+        if csa.c_variadic {                                             
+            if inputs.is_empty() {                                        
+                write!(f, "...")?;                                        
+            } else {                                                      
+                write!(f, ", ...")?;                                      
+            }                                                             
+        }                                                                 
+        write!(f, ")")?;                                                  
+                                                                          
+        let output = sig.output();                                        
+        match output.kind() {                                             
+            ty::Tuple(list) if list.is_empty() => Ok(()),                     
+            _ => write!(f, " -> {:?}", &this.wrap(sig.output())),         
+        }                   
+    }
+}
+
+impl<'tcx> fmt::Display for FnSig<'tcx> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        //<I as IrPrint<FnSig<'tcx>>>::print(self, fmt)
+        //<Self as rustc_type_ir::ir_print::IrPrint<FnSig<'tcx>>>::print(self, fmt)
+        write!(fmt, "FnSig!") // njn: fix this, causes four failures:
+	// failures:
+	//     [ui] tests/ui/drop/recursion-check-on-erroneous-impl.rs
+	//     [ui] tests/ui/fn/issue-39259.rs
+	//     [ui] tests/ui/impl-trait/trait_type.rs
+	//     [ui] tests/ui/issues/issue-48276.rs
     }
 }
 

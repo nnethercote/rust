@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{
-    AliasTerm, AliasTy, Binder, CoercePredicate, ExistentialProjection, ExistentialTraitRef, FnSig,
+    AliasTerm, AliasTy, Binder, CoercePredicate, ExistentialProjection, ExistentialTraitRef,
     Interner, NormalizesTo, OutlivesPredicate, ProjectionPredicate, SubtypePredicate,
     TraitPredicate, TraitRef,
 };
@@ -55,7 +55,6 @@ define_display_via_print!(
     CoercePredicate,
     AliasTy,
     AliasTerm,
-    FnSig,
 );
 
 define_debug_via_print!(TraitRef, ExistentialTraitRef, ExistentialProjection);

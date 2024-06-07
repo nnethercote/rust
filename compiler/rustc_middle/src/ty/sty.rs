@@ -8,7 +8,7 @@ use crate::ty::{
     self, AdtDef, BoundRegionKind, Discr, Region, Ty, TyCtxt, TypeFlags, TypeSuperVisitable,
     TypeVisitable, TypeVisitor,
 };
-use crate::ty::{GenericArg, GenericArgs, GenericArgsRef};
+use crate::ty::{FnSig, GenericArg, GenericArgs, GenericArgsRef};
 use crate::ty::{List, ParamEnv};
 use hir::def::{CtorKind, DefKind};
 use rustc_data_structures::captures::Captures;
@@ -37,7 +37,7 @@ use super::GenericParamDefKind;
 pub type TyKind<'tcx> = ir::TyKind<TyCtxt<'tcx>>;
 pub type TypeAndMut<'tcx> = ir::TypeAndMut<TyCtxt<'tcx>>;
 pub type AliasTy<'tcx> = ir::AliasTy<TyCtxt<'tcx>>;
-pub type FnSig<'tcx> = ir::FnSig<TyCtxt<'tcx>>;
+//pub type FnSig<'tcx> = ir::FnSig<TyCtxt<'tcx>>; // njn: remove
 pub type Binder<'tcx, T> = ir::Binder<TyCtxt<'tcx>, T>;
 pub type EarlyBinder<'tcx, T> = ir::EarlyBinder<TyCtxt<'tcx>, T>;
 
