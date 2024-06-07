@@ -1401,7 +1401,7 @@ impl<'a, 'tcx> TypeChecker<'a, 'tcx> {
                 //
                 // See #91068 for an example.
                 self.prove_predicates(
-                    unnormalized_sig.inputs_and_output.iter().map(|ty| {
+                    unnormalized_sig.csa.inputs_and_output.iter().map(|ty| {
                         ty::Binder::dummy(ty::PredicateKind::Clause(ty::ClauseKind::WellFormed(
                             ty.into(),
                         )))
@@ -1416,7 +1416,7 @@ impl<'a, 'tcx> TypeChecker<'a, 'tcx> {
                 // well-formed itself.
                 if sig != unnormalized_sig {
                     self.prove_predicates(
-                        sig.inputs_and_output.iter().map(|ty| {
+                        sig.csa.inputs_and_output.iter().map(|ty| {
                             ty::Binder::dummy(ty::PredicateKind::Clause(
                                 ty::ClauseKind::WellFormed(ty.into()),
                             ))

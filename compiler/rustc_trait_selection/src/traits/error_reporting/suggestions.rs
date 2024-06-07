@@ -3922,11 +3922,11 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
             && let fn_sig @ ty::FnSig {
                 // njn: qual
                 csa: rustc_middle::ty::Csa {
+                    inputs_and_output: _,
                     abi: abi::Abi::Rust,
                     c_variadic: false,
                     safety: hir::Safety::Safe,
                 },
-                ..
             } = fn_ty.fn_sig(tcx).skip_binder()
 
             // Extract first param of fn sig with peeled refs, e.g. `fn(&T)` -> `T`

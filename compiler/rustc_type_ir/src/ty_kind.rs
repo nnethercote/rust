@@ -1013,21 +1013,20 @@ pub struct TypeAndMut<I: Interner> {
 #[cfg_attr(feature = "nightly", derive(TyEncodable, TyDecodable, HashStable_NoContext))]
 #[derive(TypeVisitable_Generic, TypeFoldable_Generic, Lift_Generic)]
 pub struct FnSig<I: Interner> {
-    pub inputs_and_output: I::Tys,
     pub csa: I::Csa,
 }
 
 impl<I: Interner> FnSig<I> {
     pub fn inputs(self) -> I::FnInputTys {
-        self.inputs_and_output.inputs()
+        self.csa.inputs_and_output().inputs()
     }
 
     pub fn output(self) -> I::Ty {
-        self.inputs_and_output.output()
+        self.csa.inputs_and_output().output()
     }
 
     pub fn is_fn_trait_compatible(self) -> bool {
-        let FnSig { csa, .. } = self;
+        let FnSig { csa } = self;
         !csa.c_variadic() && csa.safety().is_safe() && csa.abi().is_rust()
     }
 }
@@ -1045,7 +1044,7 @@ impl<I: Interner> ty::Binder<I, FnSig<I>> {
     }
 
     pub fn inputs_and_output(self) -> ty::Binder<I, I::Tys> {
-        self.map_bound(|fn_sig| fn_sig.inputs_and_output)
+        self.map_bound(|fn_sig| fn_sig.csa.inputs_and_output())
     }
 
     #[inline]
@@ -1081,7 +1080,7 @@ impl<I: Interner> DebugWithInfcx<I> for FnSig<I> {
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         let sig = this.data;
-        let FnSig { inputs_and_output: _, csa } = sig;
+        let FnSig { csa } = sig;
 
         write!(f, "{}", csa.safety().prefix_str())?;
         if !csa.abi().is_rust() {

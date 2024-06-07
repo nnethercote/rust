@@ -66,9 +66,9 @@ fn fn_sig_for_fn_abi<'tcx>(
             if let ty::InstanceDef::VTableShim(..) = instance.def {
                 // Modify `fn(self, ...)` to `fn(self: *mut Self, ...)`.
                 sig = sig.map_bound(|mut sig| {
-                    let mut inputs_and_output = sig.inputs_and_output.to_vec();
+                    let mut inputs_and_output = sig.csa.inputs_and_output.to_vec();
                     inputs_and_output[0] = Ty::new_mut_ptr(tcx, inputs_and_output[0]);
-                    sig.inputs_and_output = tcx.mk_type_list(&inputs_and_output);
+                    sig.csa.inputs_and_output = tcx.mk_type_list(&inputs_and_output);
                     sig
                 });
             }

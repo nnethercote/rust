@@ -353,7 +353,6 @@ TrivialTypeTraversalAndLiftImpls! {
     ::rustc_hir::def_id::DefId,
     ::rustc_hir::Safety,
     ::rustc_target::spec::abi::Abi,
-    crate::ty::fn_sig::Csa,
     crate::ty::ClosureKind,
     crate::ty::ParamConst,
     crate::ty::ParamTy,

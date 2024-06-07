@@ -183,9 +183,13 @@ impl<'tcx> Relate<'tcx> for ty::FnSig<'tcx> {
                 r => r,
             });
         Ok(ty::FnSig {
-            inputs_and_output: tcx.mk_type_list_from_iter(inputs_and_output)?,
             // njn: qual
-            csa: crate::ty::Csa { c_variadic: a.csa.c_variadic, safety, abi },
+            csa: crate::ty::Csa {
+                inputs_and_output: tcx.mk_type_list_from_iter(inputs_and_output)?,
+                c_variadic: a.csa.c_variadic,
+                safety,
+                abi,
+            },
         })
     }
 }

@@ -118,7 +118,7 @@ impl<'tcx> Interner for TyCtxt<'tcx> {
     type Pat = Pattern<'tcx>;
     type Safety = hir::Safety;
     type Abi = abi::Abi;
-    type Csa = ty::fn_sig::Csa;
+    type Csa = ty::Csa<'tcx>;
 
     type Const = ty::Const<'tcx>;
     type PlaceholderConst = ty::PlaceholderConst;
@@ -250,8 +250,11 @@ impl<'tcx> rustc_type_ir::inherent::Safety<TyCtxt<'tcx>> for hir::Safety {
     }
 }
 
-// njn: look for fn_sig::Csa, change to ty::Csa
-impl<'tcx> rustc_type_ir::inherent::Csa<TyCtxt<'tcx>> for ty::Csa {
+impl<'tcx> rustc_type_ir::inherent::Csa<TyCtxt<'tcx>> for ty::Csa<'tcx> {
+    fn inputs_and_output(self) -> &'tcx List<Ty<'tcx>> {
+        self.inputs_and_output
+    }
+
     fn c_variadic(self) -> bool {
         self.c_variadic
     }
@@ -2054,9 +2057,12 @@ impl<'tcx> TyCtxt<'tcx> {
         Ty::new_fn_ptr(
             self,
             sig.map_bound(|sig| ty::FnSig {
-                inputs_and_output: sig.inputs_and_output,
                 // njn: qual
-                csa: crate::ty::Csa { safety: hir::Safety::Unsafe, ..sig.csa },
+                csa: crate::ty::Csa {
+                    inputs_and_output: sig.csa.inputs_and_output,
+                    safety: hir::Safety::Unsafe,
+                    ..sig.csa
+                },
             }),
         )
     }
@@ -2399,9 +2405,13 @@ impl<'tcx> TyCtxt<'tcx> {
         T: CollectAndApply<Ty<'tcx>, ty::FnSig<'tcx>>,
     {
         T::collect_and_apply(inputs.into_iter().chain(iter::once(output)), |xs| ty::FnSig {
-            inputs_and_output: self.mk_type_list(xs),
             // njn: qual
-            csa: crate::ty::Csa { c_variadic, safety, abi },
+            csa: crate::ty::Csa {
+                inputs_and_output: self.mk_type_list(xs),
+                c_variadic,
+                safety,
+                abi,
+            },
         })
     }
 
