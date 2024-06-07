@@ -61,7 +61,9 @@ pub trait Tys<I: Interner<Tys = Self>>:
     + TypeFoldable<I>
     + Default
 {
-    fn split_inputs_and_output(self) -> (I::FnInputTys, I::Ty);
+    fn inputs(self) -> I::FnInputTys;
+
+    fn output(self) -> I::Ty;
 }
 
 pub trait Abi<I: Interner<Abi = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
