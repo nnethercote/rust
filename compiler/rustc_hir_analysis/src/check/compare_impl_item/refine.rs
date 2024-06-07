@@ -150,11 +150,11 @@ pub(super) fn check_refining_return_position_impl_trait_in_trait<'tcx>(
     // this resolution to have incurred any region errors -- but if we do, then
     // just delay a bug.
     let mut implied_wf_types = FxIndexSet::default();
-    implied_wf_types.extend(trait_m_sig.csa.inputs_and_output);
+    implied_wf_types.extend(trait_m_sig.inputs_and_output);
     implied_wf_types.extend(ocx.normalize(
         &ObligationCause::dummy(),
         param_env,
-        trait_m_sig.csa.inputs_and_output,
+        trait_m_sig.inputs_and_output,
     ));
     if !ocx.select_all_or_error().is_empty() {
         tcx.dcx().delayed_bug("encountered errors when checking RPITIT refinement (selection)");

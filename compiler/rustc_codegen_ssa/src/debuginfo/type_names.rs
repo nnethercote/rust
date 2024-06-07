@@ -365,11 +365,11 @@ fn push_debuginfo_type_name<'tcx>(
                 }
                 output.push_str(" (*)(");
             } else {
-                output.push_str(sig.csa.safety.prefix_str());
+                output.push_str(sig.safety.prefix_str());
 
-                if sig.csa.abi != rustc_target::spec::abi::Abi::Rust {
+                if sig.abi != rustc_target::spec::abi::Abi::Rust {
                     output.push_str("extern \"");
-                    output.push_str(sig.csa.abi.name());
+                    output.push_str(sig.abi.name());
                     output.push_str("\" ");
                 }
 
@@ -384,7 +384,7 @@ fn push_debuginfo_type_name<'tcx>(
                 pop_arg_separator(output);
             }
 
-            if sig.csa.c_variadic {
+            if sig.c_variadic {
                 if !sig.inputs().is_empty() {
                     output.push_str(", ...");
                 } else {

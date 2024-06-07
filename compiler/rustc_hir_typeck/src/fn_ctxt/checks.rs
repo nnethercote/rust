@@ -157,7 +157,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             &method.sig.inputs()[1..],
             expected_input_tys,
             args_no_rcvr,
-            method.sig.csa.c_variadic,
+            method.sig.c_variadic,
             tuple_arguments,
             Some(method.def_id),
         );

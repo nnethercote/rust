@@ -3013,13 +3013,13 @@ define_print! {
     (self, cx):
 
     ty::FnSig<'tcx> {
-        p!(write("{}", self.csa.safety.prefix_str()));
+        p!(write("{}", self.safety.prefix_str()));
 
-        if self.csa.abi != Abi::Rust {
-            p!(write("extern {} ", self.csa.abi));
+        if self.abi != Abi::Rust {
+            p!(write("extern {} ", self.abi));
         }
 
-        p!("fn", pretty_fn_sig(self.inputs(), self.csa.c_variadic, self.output()));
+        p!("fn", pretty_fn_sig(self.inputs(), self.c_variadic, self.output()));
     }
 
     ty::TraitRef<'tcx> {

@@ -278,11 +278,11 @@ fn compare_method_predicate_entailment<'tcx>(
     // Next, add all inputs and output as well-formed tys. Importantly,
     // we have to do this before normalization, since the normalized ty may
     // not contain the input parameters. See issue #87748.
-    wf_tys.extend(trait_sig.csa.inputs_and_output.iter());
+    wf_tys.extend(trait_sig.inputs_and_output.iter());
     let trait_sig = ocx.normalize(&norm_cause, param_env, trait_sig);
     // We also have to add the normalized trait signature
     // as we don't normalize during implied bounds computation.
-    wf_tys.extend(trait_sig.csa.inputs_and_output.iter());
+    wf_tys.extend(trait_sig.inputs_and_output.iter());
     let trait_fty = Ty::new_fn_ptr(tcx, ty::Binder::dummy(trait_sig));
 
     debug!("compare_impl_method: trait_fty={:?}", trait_fty);
@@ -329,7 +329,7 @@ fn compare_method_predicate_entailment<'tcx>(
         // solver is stable. We should just be able to register a WF pred for
         // the fn sig.
         let mut wf_args: smallvec::SmallVec<[_; 4]> =
-            unnormalized_impl_sig.csa.inputs_and_output.iter().map(|ty| ty.into()).collect();
+            unnormalized_impl_sig.inputs_and_output.iter().map(|ty| ty.into()).collect();
         // Annoyingly, asking for the WF predicates of an array (with an unevaluated const (only?))
         // will give back the well-formed predicate of the same array.
         let mut wf_args_seen: FxHashSet<_> = wf_args.iter().copied().collect();
@@ -579,10 +579,9 @@ pub(super) fn collect_return_position_impl_trait_in_trait_tys<'tcx>(
     };
     let wf_tys = FxIndexSet::from_iter(
         unnormalized_trait_sig
-            .csa
             .inputs_and_output
             .iter()
-            .chain(trait_sig.csa.inputs_and_output.iter())
+            .chain(trait_sig.inputs_and_output.iter())
             .map(|ty| ty.fold_with(&mut type_mapper)),
     );
 

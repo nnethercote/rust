@@ -88,9 +88,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     tcx.mk_fn_sig(
                         [Ty::new_tup(tcx, sig.inputs())],
                         sig.output(),
-                        sig.csa.c_variadic,
-                        sig.csa.safety,
-                        sig.csa.abi,
+                        sig.c_variadic,
+                        sig.safety,
+                        sig.abi,
                     )
                 });
 
@@ -237,9 +237,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                                         Ty::new_tup_from_iter(tcx, sig.inputs().iter().copied()),
                                     ],
                                     Ty::new_tup(tcx, &[bound_yield_ty, bound_return_ty]),
-                                    sig.csa.c_variadic,
-                                    sig.csa.safety,
-                                    sig.csa.abi,
+                                    sig.c_variadic,
+                                    sig.safety,
+                                    sig.abi,
                                 )
                             }),
                         ),
@@ -280,9 +280,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 liberated_sig = tcx.mk_fn_sig(
                     liberated_sig.inputs().iter().copied(),
                     coroutine_output_ty,
-                    liberated_sig.csa.c_variadic,
-                    liberated_sig.csa.safety,
-                    liberated_sig.csa.abi,
+                    liberated_sig.c_variadic,
+                    liberated_sig.safety,
+                    liberated_sig.abi,
                 );
 
                 (Ty::new_coroutine_closure(tcx, expr_def_id.to_def_id(), closure_args.args), None)
@@ -588,9 +588,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         // expect.
         if expected_sig.sig.c_variadic() != decl.c_variadic {
             return self.sig_of_closure_no_expectation(expr_def_id, decl, closure_kind);
-        } else if expected_sig.sig.skip_binder().csa.inputs_and_output.len()
-            != decl.inputs.len() + 1
-        {
+        } else if expected_sig.sig.skip_binder().inputs_and_output.len() != decl.inputs.len() + 1 {
             return self.sig_of_closure_with_mismatched_number_of_arguments(
                 expr_def_id,
                 decl,
@@ -606,7 +604,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             self.tcx.mk_fn_sig(
                 sig.inputs().iter().cloned(),
                 sig.output(),
-                sig.csa.c_variadic,
+                sig.c_variadic,
                 hir::Safety::Safe,
                 Abi::RustCall,
             )
@@ -744,7 +742,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             expected_sigs.liberated_sig = self.tcx.mk_fn_sig(
                 inputs,
                 supplied_output_ty,
-                expected_sigs.liberated_sig.csa.c_variadic,
+                expected_sigs.liberated_sig.c_variadic,
                 hir::Safety::Safe,
                 Abi::RustCall,
             );

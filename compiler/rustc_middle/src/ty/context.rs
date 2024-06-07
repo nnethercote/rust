@@ -253,31 +253,31 @@ impl<'tcx> rustc_type_ir::inherent::Safety<TyCtxt<'tcx>> for hir::Safety {
 
 impl<'tcx> rustc_type_ir::inherent::FnSig<TyCtxt<'tcx>> for ty::FnSig<'tcx> {
     fn inputs_and_output(self) -> &'tcx List<Ty<'tcx>> {
-        self.csa.inputs_and_output
+        self.inputs_and_output
     }
 
     fn inputs(self) -> &'tcx [Ty<'tcx>] {
-        self.csa.inputs_and_output.inputs()
+        self.inputs_and_output.inputs()
     }
 
     fn output(self) -> Ty<'tcx> {
-        self.csa.inputs_and_output.output()
+        self.inputs_and_output.output()
     }
 
     fn c_variadic(self) -> bool {
-        self.csa.c_variadic
+        self.c_variadic
     }
 
     fn safety(self) -> hir::Safety {
-        self.csa.safety
+        self.safety
     }
 
     fn abi(self) -> abi::Abi {
-        self.csa.abi
+        self.abi
     }
 
     fn is_fn_trait_compatible(self) -> bool {
-        !self.csa.c_variadic && self.csa.safety.is_safe() && self.csa.abi.is_rust()
+        !self.c_variadic && self.safety.is_safe() && self.abi.is_rust()
     }
 }
 
@@ -2070,12 +2070,9 @@ impl<'tcx> TyCtxt<'tcx> {
         Ty::new_fn_ptr(
             self,
             sig.map_bound(|sig| ty::FnSig {
-                // njn: qual
-                csa: crate::ty::Csa {
-                    inputs_and_output: sig.csa.inputs_and_output,
-                    safety: hir::Safety::Unsafe,
-                    ..sig.csa
-                },
+                inputs_and_output: sig.inputs_and_output,
+                safety: hir::Safety::Unsafe,
+                ..sig
             }),
         )
     }
@@ -2143,7 +2140,7 @@ impl<'tcx> TyCtxt<'tcx> {
                 ty::Tuple(params) => *params,
                 _ => bug!(),
             };
-            self.mk_fn_sig(params, s.output(), s.csa.c_variadic, safety, abi::Abi::Rust)
+            self.mk_fn_sig(params, s.output(), s.c_variadic, safety, abi::Abi::Rust)
         })
     }
 
@@ -2418,13 +2415,10 @@ impl<'tcx> TyCtxt<'tcx> {
         T: CollectAndApply<Ty<'tcx>, ty::FnSig<'tcx>>,
     {
         T::collect_and_apply(inputs.into_iter().chain(iter::once(output)), |xs| ty::FnSig {
-            // njn: qual
-            csa: crate::ty::Csa {
-                inputs_and_output: self.mk_type_list(xs),
-                c_variadic,
-                safety,
-                abi,
-            },
+            inputs_and_output: self.mk_type_list(xs),
+            c_variadic,
+            safety,
+            abi,
         })
     }
 

@@ -968,7 +968,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 .borrow()
                 .type_dependent_def_id(expr.hir_id)
                 .map(|def_id| self.tcx.fn_sig(def_id).skip_binder().skip_binder())
-                .and_then(|sig| sig.csa.inputs_and_output.split_last())
+                .and_then(|sig| sig.inputs_and_output.split_last())
                 .is_some_and(|(output, inputs)| {
                     output.is_unit()
                         && inputs

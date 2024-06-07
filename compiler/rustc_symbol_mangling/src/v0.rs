@@ -424,10 +424,10 @@ impl<'tcx> Printer<'tcx> for SymbolMangler<'tcx> {
             ty::FnPtr(sig) => {
                 self.push("F");
                 self.in_binder(&sig, |cx, sig| {
-                    if sig.csa.safety == hir::Safety::Unsafe {
+                    if sig.safety == hir::Safety::Unsafe {
                         cx.push("U");
                     }
-                    match sig.csa.abi {
+                    match sig.abi {
                         Abi::Rust => {}
                         Abi::C { unwind: false } => cx.push("KC"),
                         abi => {
@@ -443,7 +443,7 @@ impl<'tcx> Printer<'tcx> for SymbolMangler<'tcx> {
                     for &ty in sig.inputs() {
                         ty.print(cx)?;
                     }
-                    if sig.csa.c_variadic {
+                    if sig.c_variadic {
                         cx.push("v");
                     }
                     cx.push("E");

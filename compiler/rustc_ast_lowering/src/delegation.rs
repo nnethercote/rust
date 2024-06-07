@@ -135,7 +135,7 @@ impl<'hir> LoweringContext<'_, 'hir> {
             }
         } else {
             let sig = self.tcx.fn_sig(sig_id).skip_binder().skip_binder();
-            (sig.inputs().len() + usize::from(sig.csa.c_variadic), sig.csa.c_variadic)
+            (sig.inputs().len() + usize::from(sig.c_variadic), sig.c_variadic)
         }
     }
 
@@ -188,10 +188,10 @@ impl<'hir> LoweringContext<'_, 'hir> {
                 Asyncness::No => hir::IsAsync::NotAsync,
             };
             hir::FnHeader {
-                safety: sig.csa.safety,
+                safety: sig.safety,
                 constness: self.tcx.constness(sig_id),
                 asyncness,
-                abi: sig.csa.abi,
+                abi: sig.abi,
             }
         };
         hir::FnSig { decl, header, span }

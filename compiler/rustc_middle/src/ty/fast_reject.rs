@@ -281,14 +281,14 @@ impl DeepRejectCtxt {
             }
             ty::FnPtr(obl_sig) => match k {
                 ty::FnPtr(impl_sig) => {
-                    let ty::FnSig { csa } = obl_sig.skip_binder();
+                    let obl_sig = obl_sig.skip_binder();
                     let impl_sig = impl_sig.skip_binder();
 
-                    csa.abi == impl_sig.csa.abi
-                        && csa.c_variadic == impl_sig.csa.c_variadic
-                        && csa.safety == impl_sig.csa.safety
-                        && csa.inputs_and_output.len() == impl_sig.csa.inputs_and_output.len()
-                        && iter::zip(csa.inputs_and_output, impl_sig.csa.inputs_and_output)
+                    obl_sig.abi == impl_sig.abi
+                        && obl_sig.c_variadic == impl_sig.c_variadic
+                        && obl_sig.safety == impl_sig.safety
+                        && obl_sig.inputs_and_output.len() == impl_sig.inputs_and_output.len()
+                        && iter::zip(obl_sig.inputs_and_output, impl_sig.inputs_and_output)
                             .all(|(obl, imp)| self.types_may_unify(obl, imp))
                 }
                 _ => false,

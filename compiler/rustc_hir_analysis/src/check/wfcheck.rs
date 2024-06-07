@@ -463,7 +463,7 @@ fn check_gat_where_clauses(tcx: TyCtxt<'_>, trait_def_id: LocalDefId) {
                             tcx,
                             param_env,
                             item_def_id,
-                            sig.csa.inputs_and_output,
+                            sig.inputs_and_output,
                             // We also assume that all of the function signature's parameter types
                             // are well formed.
                             &sig.inputs().iter().copied().collect(),
@@ -1576,8 +1576,8 @@ fn check_fn_or_method<'tcx>(
     let arg_span =
         |idx| hir_decl.inputs.get(idx).map_or(hir_decl.output.span(), |arg: &hir::Ty<'_>| arg.span);
 
-    sig.csa.inputs_and_output = tcx.mk_type_list_from_iter(
-        sig.csa.inputs_and_output.iter().enumerate().map(|(idx, ty)| {
+    sig.inputs_and_output =
+        tcx.mk_type_list_from_iter(sig.inputs_and_output.iter().enumerate().map(|(idx, ty)| {
             wfcx.normalize(
                 arg_span(idx),
                 Some(WellFormedLoc::Param {
@@ -1588,10 +1588,9 @@ fn check_fn_or_method<'tcx>(
                 }),
                 ty,
             )
-        }),
-    );
+        }));
 
-    for (idx, ty) in sig.csa.inputs_and_output.iter().enumerate() {
+    for (idx, ty) in sig.inputs_and_output.iter().enumerate() {
         wfcx.register_wf_obligation(
             arg_span(idx),
             Some(WellFormedLoc::Param { function: def_id, param_idx: idx.try_into().unwrap() }),
@@ -1601,7 +1600,7 @@ fn check_fn_or_method<'tcx>(
 
     check_where_clauses(wfcx, span, def_id);
 
-    if sig.csa.abi == Abi::RustCall {
+    if sig.abi == Abi::RustCall {
         let span = tcx.def_span(def_id);
         let has_implicit_self = hir_decl.implicit_self != hir::ImplicitSelfKind::None;
         let mut inputs = sig.inputs().iter().skip(if has_implicit_self { 1 } else { 0 });
