@@ -118,6 +118,7 @@ impl<'tcx> Interner for TyCtxt<'tcx> {
     type Pat = Pattern<'tcx>;
     type Safety = hir::Safety;
     type Abi = abi::Abi;
+    type Csa = ty::fn_sig::Csa;
 
     type Const = ty::Const<'tcx>;
     type PlaceholderConst = ty::PlaceholderConst;
@@ -246,6 +247,21 @@ impl<'tcx> rustc_type_ir::inherent::Safety<TyCtxt<'tcx>> for hir::Safety {
 
     fn prefix_str(self) -> &'static str {
         self.prefix_str()
+    }
+}
+
+// njn: look for fn_sig::Csa, change to ty::Csa
+impl<'tcx> rustc_type_ir::inherent::Csa<TyCtxt<'tcx>> for ty::Csa {
+    fn c_variadic(self) -> bool {
+        self.c_variadic
+    }
+
+    fn safety(self) -> hir::Safety {
+        self.safety
+    }
+
+    fn abi(self) -> abi::Abi {
+        self.abi
     }
 }
 

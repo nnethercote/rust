@@ -1012,31 +1012,9 @@ pub struct TypeAndMut<I: Interner> {
 )]
 #[cfg_attr(feature = "nightly", derive(TyEncodable, TyDecodable, HashStable_NoContext))]
 #[derive(TypeVisitable_Generic, TypeFoldable_Generic, Lift_Generic)]
-pub struct Csa<I: Interner> {
-    pub c_variadic: bool,
-    pub safety: I::Safety,
-    pub abi: I::Abi,
-}
-
-impl<I: Interner> fmt::Debug for Csa<I> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Csa!") // njn: todo
-    }
-}
-
-#[derive(derivative::Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Copy(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = ""),
-    Hash(bound = "")
-)]
-#[cfg_attr(feature = "nightly", derive(TyEncodable, TyDecodable, HashStable_NoContext))]
-#[derive(TypeVisitable_Generic, TypeFoldable_Generic, Lift_Generic)]
 pub struct FnSig<I: Interner> {
     pub inputs_and_output: I::Tys,
-    pub csa: Csa<I>,
+    pub csa: I::Csa,
 }
 
 impl<I: Interner> FnSig<I> {
@@ -1050,7 +1028,7 @@ impl<I: Interner> FnSig<I> {
 
     pub fn is_fn_trait_compatible(self) -> bool {
         let FnSig { csa, .. } = self;
-        !csa.c_variadic && csa.safety.is_safe() && csa.abi.is_rust()
+        !csa.c_variadic() && csa.safety().is_safe() && csa.abi().is_rust()
     }
 }
 
@@ -1076,15 +1054,15 @@ impl<I: Interner> ty::Binder<I, FnSig<I>> {
     }
 
     pub fn c_variadic(self) -> bool {
-        self.skip_binder().csa.c_variadic
+        self.skip_binder().csa.c_variadic()
     }
 
     pub fn safety(self) -> I::Safety {
-        self.skip_binder().csa.safety
+        self.skip_binder().csa.safety()
     }
 
     pub fn abi(self) -> I::Abi {
-        self.skip_binder().csa.abi
+        self.skip_binder().csa.abi()
     }
 
     pub fn is_fn_trait_compatible(&self) -> bool {
@@ -1105,9 +1083,9 @@ impl<I: Interner> DebugWithInfcx<I> for FnSig<I> {
         let sig = this.data;
         let FnSig { inputs_and_output: _, csa } = sig;
 
-        write!(f, "{}", csa.safety.prefix_str())?;
-        if !csa.abi.is_rust() {
-            write!(f, "extern \"{:?}\" ", csa.abi)?;
+        write!(f, "{}", csa.safety().prefix_str())?;
+        if !csa.abi().is_rust() {
+            write!(f, "extern \"{:?}\" ", csa.abi())?;
         }
 
         write!(f, "fn(")?;
@@ -1118,7 +1096,7 @@ impl<I: Interner> DebugWithInfcx<I> for FnSig<I> {
             }
             write!(f, "{:?}", &this.wrap(ty))?;
         }
-        if csa.c_variadic {
+        if csa.c_variadic() {
             if inputs.is_empty() {
                 write!(f, "...")?;
             } else {

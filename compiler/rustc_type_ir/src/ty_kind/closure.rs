@@ -319,9 +319,9 @@ impl<I: Interner> CoroutineClosureArgs<I> {
                 resume_ty,
                 yield_ty,
                 return_ty,
-                c_variadic: sig.csa.c_variadic,
-                safety: sig.csa.safety,
-                abi: sig.csa.abi,
+                c_variadic: sig.csa.c_variadic(),
+                safety: sig.csa.safety(),
+                abi: sig.csa.abi(),
             }
         })
     }

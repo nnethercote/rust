@@ -67,14 +67,25 @@ pub trait Tys<I: Interner<Tys = Self>>:
 }
 
 pub trait Abi<I: Interner<Abi = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
+    // njn: remove some/all of these?
     /// Whether this ABI is `extern "Rust"`.
     fn is_rust(self) -> bool;
 }
 
 pub trait Safety<I: Interner<Safety = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
+    // njn: remove some/all of these?
     fn is_safe(self) -> bool;
 
     fn prefix_str(self) -> &'static str;
+}
+
+pub trait Csa<I: Interner<Csa = Self>>: Copy + Debug + Hash + Eq + TypeVisitable<I> {
+    // njn: what in here?
+    fn c_variadic(self) -> bool;
+
+    fn safety(self) -> I::Safety;
+
+    fn abi(self) -> I::Abi;
 }
 
 pub trait Region<I: Interner<Region = Self>>:
