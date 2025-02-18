@@ -23,9 +23,9 @@ use crate::ty::{self, GenericArgsRef, List, Region, Ty, UserTypeAnnotationIndex}
 
 /// Represents the "flavors" of MIR.
 ///
-/// All flavors of MIR use the same data structure, but there are some important differences. Each
-/// flavor has (a) a dialect and, (b) a phase within that dialect. A single
-/// `MirPhase` value specifies both a dialect and a phase.
+/// The MIR pipeline is structured into a few major dialects, with one or more phases within each
+/// dialect. A MIR flavor is identified by a dialect-phase pair. A single `MirPhase` value
+/// specifies such a pair. All flavors of MIR use the same data structure.
 ///
 /// Different MIR dialects have different semantics. (The differences between dialects are small,
 /// but they do exist.) The progression from one MIR dialect to the next is technically a lowering
@@ -33,10 +33,9 @@ use crate::ty::{self, GenericArgsRef, List, Region, Ty, UserTypeAnnotationIndex}
 /// have different semantic meaning and different behavior at runtime in the different dialects.
 /// The specific differences between dialects are described on the variants below.
 ///
-/// Within a dialect there are one or more phases. Phases exist only to place restrictions on what
-/// language constructs are permitted in well-formed MIR, and subsequent phases mostly increase
-/// those restrictions. I.e. to convert MIR from one phase to the next might require
-/// removing/replacing certain MIR constructs.
+/// Phases exist only to place restrictions on what language constructs are permitted in
+/// well-formed MIR, and subsequent phases mostly increase those restrictions. I.e. to convert MIR
+/// from one phase to the next might require removing/replacing certain MIR constructs.
 ///
 /// When adding dialects or phases, remember to update [`MirPhase::index`].
 #[derive(Copy, Clone, TyEncodable, TyDecodable, Debug, PartialEq, Eq, PartialOrd, Ord)]
