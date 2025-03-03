@@ -76,6 +76,7 @@ exclude = [
 keyword_idents_2024 = "warn"
 unreachable_pub = "warn"
 unsafe_op_in_unsafe_fn = "warn"
+unused_crate_dependencies = "warn"
 
 [profile.release.package.rustc-rayon-core]
 # The rustc fork of Rayon has deadlock detection code which intermittently
