@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use rustc_errors::Diag;
 use rustc_hir::def_id::LocalDefId;
-use rustc_infer::infer::region_constraints::{Constraint, RegionConstraintData};
+use rustc_infer::infer::region_constraints::{Constraint, ConstraintKind, RegionConstraintData};
 use rustc_infer::infer::{
     InferCtxt, RegionResolutionError, RegionVariableOrigin, SubregionOrigin, TyCtxtInferExt as _,
 };
@@ -455,21 +455,23 @@ fn try_extract_error_from_region_constraints<'a, 'tcx>(
             _ => a_region == b_region,
         };
     let mut check =
-        |constraint: &Constraint<'tcx>, cause: &SubregionOrigin<'tcx>, exact| match *constraint {
-            Constraint::RegSubReg(sub, sup)
-                if ((exact && sup == placeholder_region)
-                    || (!exact && regions_the_same(sup, placeholder_region)))
-                    && sup != sub =>
+        |constraint: &Constraint<'tcx>, cause: &SubregionOrigin<'tcx>, exact| match constraint.kind
+        {
+            ConstraintKind::RegSubReg
+                if ((exact && constraint.sup == placeholder_region)
+                    || (!exact && regions_the_same(constraint.sup, placeholder_region)))
+                    && constraint.sup != constraint.sub =>
             {
-                Some((sub, cause.clone()))
+                Some((constraint.sub, cause.clone()))
             }
-            Constraint::VarSubReg(vid, sup)
+            ConstraintKind::VarSubReg
                 if (exact
-                    && sup == placeholder_region
-                    && !universe_of_region(vid).can_name(placeholder_universe))
-                    || (!exact && regions_the_same(sup, placeholder_region)) =>
+                    && constraint.sup == placeholder_region
+                    && !universe_of_region(constraint.sub.as_var())
+                        .can_name(placeholder_universe))
+                    || (!exact && regions_the_same(constraint.sup, placeholder_region)) =>
             {
-                Some((ty::Region::new_var(infcx.tcx, vid), cause.clone()))
+                Some((constraint.sub, cause.clone()))
             }
             _ => None,
         };

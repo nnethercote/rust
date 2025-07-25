@@ -13,7 +13,7 @@ use tracing::debug;
 
 use super::*;
 use crate::errors::UnableToConstructConstantValue;
-use crate::infer::region_constraints::{Constraint, RegionConstraintData};
+use crate::infer::region_constraints::{ConstraintKind, RegionConstraintData};
 use crate::regions::OutlivesEnvironmentBuildExt;
 use crate::traits::project::ProjectAndUnifyResult;
 
@@ -453,36 +453,42 @@ impl<'tcx> AutoTraitFinder<'tcx> {
         let mut finished_map = FxIndexMap::default();
 
         for (constraint, _) in &regions.constraints {
-            match constraint {
-                &Constraint::VarSubVar(r1, r2) => {
+            match constraint.kind {
+                ConstraintKind::VarSubVar => {
+                    let sub_vid = constraint.sub.as_var();
+                    let sup_vid = constraint.sup.as_var();
                     {
-                        let deps1 = vid_map.entry(RegionTarget::RegionVid(r1)).or_default();
-                        deps1.larger.insert(RegionTarget::RegionVid(r2));
+                        let deps1 = vid_map.entry(RegionTarget::RegionVid(sub_vid)).or_default();
+                        deps1.larger.insert(RegionTarget::RegionVid(sup_vid));
                     }
 
-                    let deps2 = vid_map.entry(RegionTarget::RegionVid(r2)).or_default();
-                    deps2.smaller.insert(RegionTarget::RegionVid(r1));
+                    let deps2 = vid_map.entry(RegionTarget::RegionVid(sup_vid)).or_default();
+                    deps2.smaller.insert(RegionTarget::RegionVid(sub_vid));
                 }
-                &Constraint::RegSubVar(region, vid) => {
+                ConstraintKind::RegSubVar => {
+                    let sup_vid = constraint.sup.as_var();
                     {
-                        let deps1 = vid_map.entry(RegionTarget::Region(region)).or_default();
-                        deps1.larger.insert(RegionTarget::RegionVid(vid));
+                        let deps1 =
+                            vid_map.entry(RegionTarget::Region(constraint.sub)).or_default();
+                        deps1.larger.insert(RegionTarget::RegionVid(sup_vid));
                     }
 
-                    let deps2 = vid_map.entry(RegionTarget::RegionVid(vid)).or_default();
-                    deps2.smaller.insert(RegionTarget::Region(region));
+                    let deps2 = vid_map.entry(RegionTarget::RegionVid(sup_vid)).or_default();
+                    deps2.smaller.insert(RegionTarget::Region(constraint.sub));
                 }
-                &Constraint::VarSubReg(vid, region) => {
-                    finished_map.insert(vid, region);
+                ConstraintKind::VarSubReg => {
+                    let sub_vid = constraint.sub.as_var();
+                    finished_map.insert(sub_vid, constraint.sup);
                 }
-                &Constraint::RegSubReg(r1, r2) => {
+                ConstraintKind::RegSubReg => {
                     {
-                        let deps1 = vid_map.entry(RegionTarget::Region(r1)).or_default();
-                        deps1.larger.insert(RegionTarget::Region(r2));
+                        let deps1 =
+                            vid_map.entry(RegionTarget::Region(constraint.sub)).or_default();
+                        deps1.larger.insert(RegionTarget::Region(constraint.sup));
                     }
 
-                    let deps2 = vid_map.entry(RegionTarget::Region(r2)).or_default();
-                    deps2.smaller.insert(RegionTarget::Region(r1));
+                    let deps2 = vid_map.entry(RegionTarget::Region(constraint.sup)).or_default();
+                    deps2.smaller.insert(RegionTarget::Region(constraint.sub));
                 }
             }
         }
