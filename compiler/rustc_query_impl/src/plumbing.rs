@@ -586,7 +586,6 @@ macro_rules! define_queries {
         $(
             pub(crate) mod $name {
                 use super::*;
-                use std::marker::PhantomData;
                 use ::rustc_middle::query::erase::{self, Erased};
 
                 pub(crate) mod get_query_incr {
@@ -724,9 +723,7 @@ macro_rules! define_queries {
                 }
 
                 #[derive(Copy, Clone, Default)]
-                pub(crate) struct QueryType<'tcx> {
-                    data: PhantomData<&'tcx ()>
-                }
+                pub(crate) struct QueryType;
 
                 const FLAGS: QueryFlags = QueryFlags {
                     is_anon: is_anon!([$($modifiers)*]),
@@ -735,7 +732,7 @@ macro_rules! define_queries {
                 };
 
                 impl<'tcx> QueryDispatcherUnerased<'tcx, queries::$name::Storage<'tcx>, FLAGS>
-                    for QueryType<'tcx>
+                    for QueryType
                 {
                     type UnerasedValue = queries::$name::Value<'tcx>;
 
@@ -811,7 +808,7 @@ macro_rules! define_queries {
                         encoder: &mut CacheEncoder<'_, 'tcx>,
                         query_result_index: &mut EncodedDepNodeIndex
                     ) {
-                        $crate::plumbing::encode_query_results::<$name::QueryType<'tcx>, _, _> (
+                        $crate::plumbing::encode_query_results::<$name::QueryType, _, _> (
                             $name::QueryType::query_dispatcher(tcx),
                             QueryCtxt::new(tcx),
                             encoder,
@@ -1001,7 +998,7 @@ macro_rules! define_queries {
             $(
                 pub(crate) fn $name<'tcx>() -> DepKindVTable<'tcx> {
                     use super::$name::QueryType;
-                    $crate::plumbing::make_dep_kind_vtable_for_query::<QueryType<'tcx>, _, _>(
+                    $crate::plumbing::make_dep_kind_vtable_for_query::<QueryType, _, _>(
                         is_eval_always!([$($modifiers)*]),
                     )
                 }
