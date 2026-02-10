@@ -14,12 +14,11 @@ use rustc_data_structures::sync::AtomicU64;
 use rustc_middle::arena::Arena;
 use rustc_middle::dep_graph::{self, DepKind, DepKindVTable, DepNode, DepNodeIndex};
 use rustc_middle::queries::{
-    self, ExternProviders, Providers, QueryCaches, QueryEngine, QueryStates,
+    ExternProviders, PerQueryVTables, Providers, QueryCaches, QueryEngine, QueryStates,
 };
 use rustc_middle::query::AsLocalKey;
 use rustc_middle::query::on_disk_cache::{CacheEncoder, EncodedDepNodeIndex, OnDiskCache};
 use rustc_middle::query::plumbing::{HashResult, QuerySystem, QuerySystemFns, QueryVTable};
-use rustc_middle::query::values::Value;
 use rustc_middle::ty::TyCtxt;
 use rustc_query_system::dep_graph::SerializedDepNodeIndex;
 use rustc_query_system::query::{
@@ -31,6 +30,7 @@ pub use crate::plumbing::{QueryCtxt, query_key_hash_verify_all};
 use crate::plumbing::{encode_all_query_results, try_mark_green};
 use crate::profiling_support::QueryKeyStringCache;
 pub use crate::profiling_support::alloc_self_profile_query_strings;
+use crate::queries::{engine, make_query_vtables};
 
 mod error;
 mod execution;
@@ -205,7 +205,7 @@ impl<'tcx, C: QueryCache, const FLAGS: QueryFlags> SemiDynamicQueryDispatcher<'t
 /// expansion.
 ///
 /// There is one macro-generated implementation of this trait for each query,
-/// on the type `rustc_query_impl::query_impl::$name::QueryType`.
+/// on the type `rustc_query_impl::queries::$name::QueryType`.
 trait QueryDispatcherUnerased<'tcx, C: QueryCache, const FLAGS: QueryFlags> {
     type UnerasedValue;
 
@@ -239,7 +239,10 @@ pub fn query_system<'tcx>(
     }
 }
 
-rustc_middle::rustc_with_all_queries! { define_queries! }
+pub mod queries {
+    use super::*;
+    rustc_middle::rustc_with_all_queries! { define_queries! }
+}
 
 pub fn provide(providers: &mut rustc_middle::util::Providers) {
     providers.hooks.alloc_self_profile_query_strings = alloc_self_profile_query_strings;

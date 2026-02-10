@@ -270,6 +270,7 @@ macro_rules! separate_provide_extern_default {
     };
 }
 
+// See also `define_queries!`.
 macro_rules! define_callbacks {
     (
         $(
@@ -277,7 +278,7 @@ macro_rules! define_callbacks {
             [$($modifiers:tt)*] fn $name:ident($($K:tt)*) -> $V:ty,
         )*
     ) => {
-        $(#[allow(unused_lifetimes)] pub mod $name {
+        $(pub mod $name {
             use super::*;
             use $crate::query::erase::{self, Erased};
 

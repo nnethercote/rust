@@ -256,7 +256,7 @@ pub fn alloc_self_profile_query_strings(tcx: TyCtxt<'_>) {
 
     let mut string_cache = QueryKeyStringCache::new();
 
-    for alloc in super::ALLOC_SELF_PROFILE_QUERY_STRINGS.iter() {
+    for alloc in crate::queries::ALLOC_SELF_PROFILE_QUERY_STRINGS.iter() {
         alloc(tcx, &mut string_cache)
     }
     tcx.sess.prof.store_query_cache_hits();
