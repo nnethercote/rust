@@ -274,93 +274,97 @@ macro_rules! define_callbacks {
     (
         $(
             $(#[$attr:meta])*
-            [$($modifiers:tt)*] fn $name:ident($($K:tt)*) -> $V:ty,
+            [$($modifiers:tt)*]
+            fn $name:ident($($K:tt)*) -> $V:ty,
         )*
     ) => {
-        $(#[allow(unused_lifetimes)] pub mod $name {
-            use super::*;
-            use $crate::query::erase::{self, Erased};
+        $(
+            #[allow(unused_lifetimes)]
+            pub mod $name {
+                use super::*;
+                use $crate::query::erase::{self, Erased};
 
-            pub type Key<'tcx> = $($K)*;
-            pub type Value<'tcx> = $V;
+                pub type Key<'tcx> = $($K)*;
+                pub type Value<'tcx> = $V;
 
-            pub type LocalKey<'tcx> = local_key_if_separate_extern!([$($modifiers)*] $($K)*);
+                pub type LocalKey<'tcx> = local_key_if_separate_extern!([$($modifiers)*] $($K)*);
 
-            /// This type alias specifies the type returned from query providers and the type
-            /// used for decoding. For regular queries this is the declared returned type `V`,
-            /// but `arena_cache` will use `<V as ArenaCached>::Provided` instead.
-            pub type ProvidedValue<'tcx> = query_if_arena!(
-                [$($modifiers)*]
-                (<$V as $crate::query::arena_cached::ArenaCached<'tcx>>::Provided)
-                ($V)
-            );
-
-            /// This function takes `ProvidedValue` and converts it to an erased `Value` by
-            /// allocating it on an arena if the query has the `arena_cache` modifier. The
-            /// value is then erased and returned. This will happen when computing the query
-            /// using a provider or decoding a stored result.
-            #[inline(always)]
-            pub fn provided_to_erased<'tcx>(
-                _tcx: TyCtxt<'tcx>,
-                provided_value: ProvidedValue<'tcx>,
-            ) -> Erased<Value<'tcx>> {
-                // Store the provided value in an arena and get a reference
-                // to it, for queries with `arena_cache`.
-                let value: Value<'tcx> = query_if_arena!([$($modifiers)*]
-                    {
-                        use $crate::query::arena_cached::ArenaCached;
-
-                        if mem::needs_drop::<<$V as ArenaCached<'tcx>>::Allocated>() {
-                            <$V as ArenaCached>::alloc_in_arena(
-                                |v| _tcx.query_system.arenas.$name.alloc(v),
-                                provided_value,
-                            )
-                        } else {
-                            <$V as ArenaCached>::alloc_in_arena(
-                                |v| _tcx.arena.dropless.alloc(v),
-                                provided_value,
-                            )
-                        }
-                    }
-                    // Otherwise, the provided value is the value.
-                    (provided_value)
+                /// This type alias specifies the type returned from query providers and the type
+                /// used for decoding. For regular queries this is the declared returned type `V`,
+                /// but `arena_cache` will use `<V as ArenaCached>::Provided` instead.
+                pub type ProvidedValue<'tcx> = query_if_arena!(
+                    [$($modifiers)*]
+                    (<$V as $crate::query::arena_cached::ArenaCached<'tcx>>::Provided)
+                    ($V)
                 );
-                erase::erase_val(value)
+
+                /// This function takes `ProvidedValue` and converts it to an erased `Value` by
+                /// allocating it on an arena if the query has the `arena_cache` modifier. The
+                /// value is then erased and returned. This will happen when computing the query
+                /// using a provider or decoding a stored result.
+                #[inline(always)]
+                pub fn provided_to_erased<'tcx>(
+                    _tcx: TyCtxt<'tcx>,
+                    provided_value: ProvidedValue<'tcx>,
+                ) -> Erased<Value<'tcx>> {
+                    // Store the provided value in an arena and get a reference
+                    // to it, for queries with `arena_cache`.
+                    let value: Value<'tcx> = query_if_arena!([$($modifiers)*]
+                        {
+                            use $crate::query::arena_cached::ArenaCached;
+
+                            if mem::needs_drop::<<$V as ArenaCached<'tcx>>::Allocated>() {
+                                <$V as ArenaCached>::alloc_in_arena(
+                                    |v| _tcx.query_system.arenas.$name.alloc(v),
+                                    provided_value,
+                                )
+                            } else {
+                                <$V as ArenaCached>::alloc_in_arena(
+                                    |v| _tcx.arena.dropless.alloc(v),
+                                    provided_value,
+                                )
+                            }
+                        }
+                        // Otherwise, the provided value is the value.
+                        (provided_value)
+                    );
+                    erase::erase_val(value)
+                }
+
+                pub type Storage<'tcx> = <$($K)* as $crate::query::Key>::Cache<Erased<$V>>;
+
+                // Ensure that keys grow no larger than 88 bytes by accident.
+                // Increase this limit if necessary, but do try to keep the size low if possible
+                #[cfg(target_pointer_width = "64")]
+                const _: () = {
+                    if size_of::<Key<'static>>() > 88 {
+                        panic!("{}", concat!(
+                            "the query `",
+                            stringify!($name),
+                            "` has a key type `",
+                            stringify!($($K)*),
+                            "` that is too large"
+                        ));
+                    }
+                };
+
+                // Ensure that values grow no larger than 64 bytes by accident.
+                // Increase this limit if necessary, but do try to keep the size low if possible
+                #[cfg(target_pointer_width = "64")]
+                #[cfg(not(feature = "rustc_randomized_layouts"))]
+                const _: () = {
+                    if size_of::<Value<'static>>() > 64 {
+                        panic!("{}", concat!(
+                            "the query `",
+                            stringify!($name),
+                            "` has a value type `",
+                            stringify!($V),
+                            "` that is too large"
+                        ));
+                    }
+                };
             }
-
-            pub type Storage<'tcx> = <$($K)* as $crate::query::Key>::Cache<Erased<$V>>;
-
-            // Ensure that keys grow no larger than 88 bytes by accident.
-            // Increase this limit if necessary, but do try to keep the size low if possible
-            #[cfg(target_pointer_width = "64")]
-            const _: () = {
-                if size_of::<Key<'static>>() > 88 {
-                    panic!("{}", concat!(
-                        "the query `",
-                        stringify!($name),
-                        "` has a key type `",
-                        stringify!($($K)*),
-                        "` that is too large"
-                    ));
-                }
-            };
-
-            // Ensure that values grow no larger than 64 bytes by accident.
-            // Increase this limit if necessary, but do try to keep the size low if possible
-            #[cfg(target_pointer_width = "64")]
-            #[cfg(not(feature = "rustc_randomized_layouts"))]
-            const _: () = {
-                if size_of::<Value<'static>>() > 64 {
-                    panic!("{}", concat!(
-                        "the query `",
-                        stringify!($name),
-                        "` has a value type `",
-                        stringify!($V),
-                        "` that is too large"
-                    ));
-                }
-            };
-        })*
+        )*
 
         /// Holds per-query arenas for queries with the `arena_cache` modifier.
         #[derive(Default)]
@@ -378,66 +382,74 @@ macro_rules! define_callbacks {
 
         #[derive(Default)]
         pub struct QueryCaches<'tcx> {
-            $($(#[$attr])* pub $name: $name::Storage<'tcx>,)*
+            $(
+                $(#[$attr])* pub $name: $name::Storage<'tcx>,
+            )*
         }
 
         impl<'tcx> $crate::query::TyCtxtEnsureOk<'tcx> {
-            $($(#[$attr])*
-            #[inline(always)]
-            pub fn $name(
-                self,
-                key: query_helper_param_ty!($($K)*),
-            ) -> ensure_ok_result!([$($modifiers)*]) {
-                query_ensure_select!(
-                    [$($modifiers)*]
-                    self.tcx,
-                    self.tcx.query_system.fns.engine.$name,
-                    &self.tcx.query_system.caches.$name,
-                    $crate::query::IntoQueryParam::into_query_param(key),
-                    false,
-                )
-            })*
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(
+                    self,
+                    key: query_helper_param_ty!($($K)*),
+                ) -> ensure_ok_result!([$($modifiers)*]) {
+                    query_ensure_select!(
+                        [$($modifiers)*]
+                        self.tcx,
+                        self.tcx.query_system.fns.engine.$name,
+                        &self.tcx.query_system.caches.$name,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                        false,
+                    )
+                }
+            )*
         }
 
         impl<'tcx> $crate::query::TyCtxtEnsureDone<'tcx> {
-            $($(#[$attr])*
-            #[inline(always)]
-            pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
-                crate::query::inner::query_ensure(
-                    self.tcx,
-                    self.tcx.query_system.fns.engine.$name,
-                    &self.tcx.query_system.caches.$name,
-                    $crate::query::IntoQueryParam::into_query_param(key),
-                    true,
-                );
-            })*
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
+                    crate::query::inner::query_ensure(
+                        self.tcx,
+                        self.tcx.query_system.fns.engine.$name,
+                        &self.tcx.query_system.caches.$name,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                        true,
+                    );
+                }
+            )*
         }
 
         impl<'tcx> TyCtxt<'tcx> {
-            $($(#[$attr])*
-            #[inline(always)]
-            #[must_use]
-            pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V
-            {
-                self.at(DUMMY_SP).$name(key)
-            })*
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                #[must_use]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V {
+                    self.at(DUMMY_SP).$name(key)
+                }
+            )*
         }
 
         impl<'tcx> $crate::query::TyCtxtAt<'tcx> {
-            $($(#[$attr])*
-            #[inline(always)]
-            pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V
-            {
-                use $crate::query::{erase, inner};
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V {
+                    use $crate::query::{erase, inner};
 
-                erase::restore_val::<$V>(inner::query_get_at(
-                    self.tcx,
-                    self.tcx.query_system.fns.engine.$name,
-                    &self.tcx.query_system.caches.$name,
-                    self.span,
-                    $crate::query::IntoQueryParam::into_query_param(key),
-                ))
-            })*
+                    erase::restore_val::<$V>(inner::query_get_at(
+                        self.tcx,
+                        self.tcx.query_system.fns.engine.$name,
+                        &self.tcx.query_system.caches.$name,
+                        self.span,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                    ))
+                }
+            )*
         }
 
         /// Holds a `QueryVTable` for each query.
@@ -457,20 +469,25 @@ macro_rules! define_callbacks {
         }
 
         pub struct Providers {
-            $(pub $name: for<'tcx> fn(
-                TyCtxt<'tcx>,
-                $name::LocalKey<'tcx>,
-            ) -> $name::ProvidedValue<'tcx>,)*
+            $(
+                pub $name: for<'tcx>
+                    fn(TyCtxt<'tcx>, $name::LocalKey<'tcx>) -> $name::ProvidedValue<'tcx>,
+            )*
         }
 
         pub struct ExternProviders {
-            $(pub $name: separate_provide_extern_decl!([$($modifiers)*][$name]),)*
+            $(
+                pub $name: separate_provide_extern_decl!([$($modifiers)*][$name]),
+            )*
         }
 
         impl Default for Providers {
             fn default() -> Self {
                 Providers {
-                    $($name: |_, key| $crate::query::plumbing::default_query(stringify!($name), &key)),*
+                    $(
+                        $name: |_, key|
+                            $crate::query::plumbing::default_query(stringify!($name), &key),
+                    )*
                 }
             }
         }
@@ -478,7 +495,9 @@ macro_rules! define_callbacks {
         impl Default for ExternProviders {
             fn default() -> Self {
                 ExternProviders {
-                    $($name: separate_provide_extern_default!([$($modifiers)*][$name]),)*
+                    $(
+                        $name: separate_provide_extern_default!([$($modifiers)*][$name]),
+                    )*
                 }
             }
         }
@@ -494,39 +513,49 @@ macro_rules! define_callbacks {
         }
 
         pub struct QueryEngine {
-            $(pub $name: for<'tcx> fn(
-                TyCtxt<'tcx>,
-                Span,
-                $name::Key<'tcx>,
-                $crate::query::QueryMode,
-            ) -> Option<$crate::query::erase::Erased<$V>>,)*
+            $(
+                pub $name: for<'tcx> fn(
+                    TyCtxt<'tcx>,
+                    Span,
+                    $name::Key<'tcx>,
+                    $crate::query::QueryMode,
+                ) -> Option<$crate::query::erase::Erased<$V>>,
+            )*
         }
     };
 }
 
 macro_rules! define_feedable {
-    ($($(#[$attr:meta])* [$($modifiers:tt)*] fn $name:ident($($K:tt)*) -> $V:ty,)*) => {
-        $(impl<'tcx, K: $crate::query::IntoQueryParam<$($K)*> + Copy> TyCtxtFeed<'tcx, K> {
-            $(#[$attr])*
-            #[inline(always)]
-            pub fn $name(self, value: $name::ProvidedValue<'tcx>) {
-                let key = self.key().into_query_param();
+    (
+        $(
+            $(#[$attr:meta])*
+            [$($modifiers:tt)*]
+            fn $name:ident($($K:tt)*) -> $V:ty,
+        )*
+    ) => {
+        $(
+            impl<'tcx, K: $crate::query::IntoQueryParam<$($K)*> + Copy> TyCtxtFeed<'tcx, K> {
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, value: $name::ProvidedValue<'tcx>) {
+                    let key = self.key().into_query_param();
 
-                let tcx = self.tcx;
-                let erased_value = $name::provided_to_erased(tcx, value);
+                    let tcx = self.tcx;
+                    let erased_value = $name::provided_to_erased(tcx, value);
 
-                let dep_kind: dep_graph::DepKind = dep_graph::dep_kinds::$name;
+                    let dep_kind: dep_graph::DepKind = dep_graph::dep_kinds::$name;
 
-                $crate::query::inner::query_feed(
-                    tcx,
-                    dep_kind,
-                    &tcx.query_system.query_vtables.$name,
-                    &tcx.query_system.caches.$name,
-                    key,
-                    erased_value,
-                );
+                    $crate::query::inner::query_feed(
+                        tcx,
+                        dep_kind,
+                        &tcx.query_system.query_vtables.$name,
+                        &tcx.query_system.caches.$name,
+                        key,
+                        erased_value,
+                    );
+                }
             }
-        })*
+        )*
     }
 }
 
