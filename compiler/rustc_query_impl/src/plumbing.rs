@@ -582,9 +582,8 @@ macro_rules! define_queries {
             [$($modifiers:tt)*] fn $name:ident($($K:tt)*) -> $V:ty,
         )*
     ) => {
-
-        pub(crate) mod query_impl { $(pub(crate) mod $name {
-            use super::super::*;
+        $(pub(crate) mod $name {
+            use super::*;
             use std::marker::PhantomData;
             use ::rustc_middle::query::erase::{self, Erased};
 
@@ -794,12 +793,8 @@ macro_rules! define_queries {
                     encoder: &mut CacheEncoder<'_, 'tcx>,
                     query_result_index: &mut EncodedDepNodeIndex
                 ) {
-                    $crate::plumbing::encode_query_results::<
-                        query_impl::$name::QueryType<'tcx>,
-                        _,
-                        _
-                    > (
-                        query_impl::$name::QueryType::query_dispatcher(tcx),
+                    $crate::plumbing::encode_query_results::<$name::QueryType<'tcx>, _, _> (
+                        $name::QueryType::query_dispatcher(tcx),
                         QueryCtxt::new(tcx),
                         encoder,
                         query_result_index,
@@ -809,20 +804,20 @@ macro_rules! define_queries {
 
             pub(crate) fn query_key_hash_verify<'tcx>(tcx: TyCtxt<'tcx>) {
                 $crate::plumbing::query_key_hash_verify(
-                    query_impl::$name::QueryType::query_dispatcher(tcx),
+                    $name::QueryType::query_dispatcher(tcx),
                     QueryCtxt::new(tcx),
                 )
             }
-        })*}
+        })*
 
         pub(crate) fn engine(incremental: bool) -> QueryEngine {
             if incremental {
                 QueryEngine {
-                    $($name: query_impl::$name::get_query_incr::__rust_end_short_backtrace,)*
+                    $($name: $name::get_query_incr::__rust_end_short_backtrace,)*
                 }
             } else {
                 QueryEngine {
-                    $($name: query_impl::$name::get_query_non_incr::__rust_end_short_backtrace,)*
+                    $($name: $name::get_query_non_incr::__rust_end_short_backtrace,)*
                 }
             }
         }
@@ -830,7 +825,7 @@ macro_rules! define_queries {
         pub fn make_query_vtables<'tcx>() -> queries::PerQueryVTables<'tcx> {
             queries::PerQueryVTables {
                 $(
-                    $name: query_impl::$name::make_query_vtable(),
+                    $name: $name::make_query_vtable(),
                 )*
             }
         }
@@ -846,12 +841,12 @@ macro_rules! define_queries {
         const PER_QUERY_GATHER_ACTIVE_JOBS_FNS: &[
             for<'tcx> fn(TyCtxt<'tcx>, &mut QueryMap<'tcx>, require_complete: bool) -> Option<()>
         ] = &[
-            $(query_impl::$name::gather_active_jobs),*
+            $($name::gather_active_jobs),*
         ];
 
         const ALLOC_SELF_PROFILE_QUERY_STRINGS: &[
             for<'tcx> fn(TyCtxt<'tcx>, &mut QueryKeyStringCache)
-        ] = &[$(query_impl::$name::alloc_self_profile_query_strings),*];
+        ] = &[$($name::alloc_self_profile_query_strings),*];
 
         const ENCODE_QUERY_RESULTS: &[
             Option<for<'tcx> fn(
@@ -859,11 +854,11 @@ macro_rules! define_queries {
                 &mut CacheEncoder<'_, 'tcx>,
                 &mut EncodedDepNodeIndex)
             >
-        ] = &[$(expand_if_cached!([$($modifiers)*], query_impl::$name::encode_query_results)),*];
+        ] = &[$(expand_if_cached!([$($modifiers)*], $name::encode_query_results)),*];
 
         const QUERY_KEY_HASH_VERIFY: &[
             for<'tcx> fn(TyCtxt<'tcx>)
-        ] = &[$(query_impl::$name::query_key_hash_verify),*];
+        ] = &[$($name::query_key_hash_verify),*];
 
         /// Module containing a named function for each dep kind (including queries)
         /// that creates a `DepKindVTable`.
@@ -969,7 +964,7 @@ macro_rules! define_queries {
             }
 
             $(pub(crate) fn $name<'tcx>() -> DepKindVTable<'tcx> {
-                use $crate::query_impl::$name::QueryType;
+                use super::$name::QueryType;
                 $crate::plumbing::make_dep_kind_vtable_for_query::<QueryType<'tcx>, _, _>(
                     is_eval_always!([$($modifiers)*]),
                 )
