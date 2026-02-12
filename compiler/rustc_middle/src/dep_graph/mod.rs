@@ -54,7 +54,7 @@ impl Deps for DepsType {
     const DEP_KIND_RED: DepKind = dep_kinds::Red;
     const DEP_KIND_SIDE_EFFECT: DepKind = dep_kinds::SideEffect;
     const DEP_KIND_ANON_ZERO_DEPS: DepKind = dep_kinds::AnonZeroDeps;
-    const DEP_KIND_MAX: u16 = dep_node::DEP_KIND_VARIANTS - 1;
+    const DEP_KIND_MAX: u16 = dep_node::NUM_DEP_KIND_VARIANTS - 1;
 }
 
 impl<'tcx> DepContext for TyCtxt<'tcx> {

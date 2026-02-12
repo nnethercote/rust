@@ -14,21 +14,9 @@ macro_rules! define_dep_nodes {
             [$($modifiers:tt)*] fn $variant:ident($($K:tt)*) -> $V:ty,
         )*
     ) => {
-
         #[macro_export]
         macro_rules! make_dep_kind_array {
             ($mod:ident) => {[ $($mod::$variant()),* ]};
-        }
-
-        /// This enum serves as an index into arrays built by `make_dep_kind_array`.
-        // This enum has more than u8::MAX variants so we need some kind of multi-byte
-        // encoding. The derived Encodable/Decodable uses leb128 encoding which is
-        // dense when only considering this enum. But DepKind is encoded in a larger
-        // struct, and there we can take advantage of the unused bits in the u16.
-        #[allow(non_camel_case_types)]
-        #[repr(u16)] // Must be kept in sync with the inner type of `DepKind`.
-        enum DepKindDefs {
-            $( $( #[$attr] )* $variant),*
         }
 
         #[allow(non_upper_case_globals)]
@@ -36,34 +24,23 @@ macro_rules! define_dep_nodes {
             use super::*;
 
             $(
-                // The `as u16` cast must be kept in sync with the inner type of `DepKind`.
-                pub const $variant: DepKind = DepKind::new(DepKindDefs::$variant as u16);
+                pub const $variant: DepKind = DepKind::new(${index()});
             )*
         }
 
         // This checks that the discriminants of the variants have been assigned consecutively
         // from 0 so that they can be used as a dense index.
-        pub(crate) const DEP_KIND_VARIANTS: u16 = {
-            let deps = &[$(dep_kinds::$variant,)*];
-            let mut i = 0;
-            while i < deps.len() {
-                if i != deps[i].as_usize() {
-                    panic!();
-                }
-                i += 1;
-            }
-            deps.len() as u16
-        };
+        pub(crate) const NUM_DEP_KIND_VARIANTS: u16 = ${count($variant)};
 
         /// List containing the name of each dep kind as a static string,
         /// indexable by `DepKind`.
         pub(crate) const DEP_KIND_NAMES: &[&str] = &[
-            $( self::label_strs::$variant, )*
+            $( stringify!($variant), )*
         ];
 
         pub(super) fn dep_kind_from_label_string(label: &str) -> Result<DepKind, ()> {
             match label {
-                $( self::label_strs::$variant => Ok(self::dep_kinds::$variant), )*
+                $( stringify!($variant) => Ok(self::dep_kinds::$variant), )*
                 _ => Err(()),
             }
         }

@@ -44,6 +44,7 @@
 #![feature(gen_blocks)]
 #![feature(if_let_guard)]
 #![feature(intra_doc_pointers)]
+#![feature(macro_metavar_expr)]
 #![feature(min_specialization)]
 #![feature(negative_impls)]
 #![feature(never_type)]
