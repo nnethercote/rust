@@ -15,7 +15,7 @@ use rustc_middle::bug;
 #[expect(unused_imports, reason = "used by doc comments")]
 use rustc_middle::dep_graph::DepKindVTable;
 use rustc_middle::dep_graph::{
-    self, DepNode, DepNodeIndex, DepNodeKey, SerializedDepNodeIndex, dep_kinds,
+    self, DepKind, DepNode, DepNodeIndex, DepNodeKey, SerializedDepNodeIndex, dep_kinds,
 };
 use rustc_middle::query::on_disk_cache::{
     AbsoluteBytePos, CacheDecoder, CacheEncoder, EncodedDepNodeIndex,
@@ -123,7 +123,7 @@ pub fn collect_active_jobs_from_all_queries<'tcx>(
     if complete { Ok(job_map_out) } else { Err(job_map_out) }
 }
 
-pub(super) fn try_mark_green<'tcx>(tcx: TyCtxt<'tcx>, dep_node: &dep_graph::DepNode) -> bool {
+pub(super) fn try_mark_green<'tcx>(tcx: TyCtxt<'tcx>, dep_node: &DepNode) -> bool {
     tcx.dep_graph.try_mark_green(tcx, dep_node).is_some()
 }
 
@@ -273,12 +273,17 @@ macro_rules! item_if_cache_on_disk {
 }
 
 /// The deferred part of a deferred query stack frame.
-fn mk_query_stack_frame_extra<'tcx, Cache>(
-    (tcx, vtable, key): (TyCtxt<'tcx>, &'tcx QueryVTable<'tcx, Cache>, Cache::Key),
+fn mk_query_stack_frame_extra<'tcx, K>(
+    (tcx, name, dep_kind, description_fn, key): (
+        TyCtxt<'tcx>,
+        &'static str,
+        DepKind,
+        fn(TyCtxt<'tcx>, K) -> String,
+        K,
+    ),
 ) -> QueryStackFrameExtra
 where
-    Cache: QueryCache,
-    Cache::Key: Key,
+    K: Key + Copy,
 {
     let def_id = key.key_as_def_id();
 
@@ -287,13 +292,13 @@ where
     let reduce_queries = with_reduced_queries();
 
     // Avoid calling queries while formatting the description
-    let description = ty::print::with_no_queries!((vtable.description_fn)(tcx, key));
+    let description = ty::print::with_no_queries!(description_fn(tcx, key));
     let description = if tcx.sess.verbose_internals() {
-        format!("{description} [{name:?}]", name = vtable.name)
+        format!("{description} [{name:?}]")
     } else {
         description
     };
-    let span = if vtable.dep_kind == dep_graph::dep_kinds::def_span || reduce_queries {
+    let span = if dep_kind == dep_graph::dep_kinds::def_span || reduce_queries {
         // The `def_span` query is used to calculate `default_span`,
         // so exit to avoid infinite recursion.
         None
@@ -301,7 +306,7 @@ where
         Some(key.default_span(tcx))
     };
 
-    let def_kind = if vtable.dep_kind == dep_graph::dep_kinds::def_kind || reduce_queries {
+    let def_kind = if dep_kind == dep_graph::dep_kinds::def_kind || reduce_queries {
         // Try to avoid infinite recursion.
         None
     } else {
@@ -331,7 +336,10 @@ where
     let def_id: Option<DefId> = key.key_as_def_id();
     let def_id_for_ty_in_cycle: Option<DefId> = key.def_id_for_ty_in_cycle();
 
-    let info = QueryStackDeferred::new((tcx, vtable, key), mk_query_stack_frame_extra);
+    let info = QueryStackDeferred::new(
+        (tcx, vtable.name, vtable.dep_kind, vtable.description_fn, key),
+        mk_query_stack_frame_extra,
+    );
     QueryStackFrame::new(info, kind, hash, def_id, def_id_for_ty_in_cycle)
 }
 
