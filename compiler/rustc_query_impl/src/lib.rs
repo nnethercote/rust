@@ -14,9 +14,7 @@ use std::marker::ConstParamTy;
 
 use rustc_data_structures::sync::AtomicU64;
 use rustc_middle::dep_graph::{self, DepKind, DepNode, DepNodeIndex, SerializedDepNodeIndex};
-use rustc_middle::queries::{
-    self, ExternProviders, Providers, QueryCaches, QueryEngine, QueryStates,
-};
+use rustc_middle::queries::{self, ExternProviders, Providers, QueryEngine};
 use rustc_middle::query::on_disk_cache::{CacheEncoder, EncodedDepNodeIndex, OnDiskCache};
 use rustc_middle::query::plumbing::{
     HashResult, QueryState, QuerySystem, QuerySystemFns, QueryVTable,
@@ -104,26 +102,14 @@ impl<'tcx, C: QueryCache, const FLAGS: QueryFlags> SemiDynamicQueryDispatcher<'t
 
     // Don't use this method to access query results, instead use the methods on TyCtxt.
     #[inline(always)]
-    fn query_state(self, tcx: TyCtxt<'tcx>) -> &'tcx QueryState<'tcx, C::Key> {
-        // Safety:
-        // This is just manually doing the subfield referencing through pointer math.
-        unsafe {
-            &*(&tcx.query_system.states as *const QueryStates<'tcx>)
-                .byte_add(self.vtable.query_state)
-                .cast::<QueryState<'tcx, C::Key>>()
-        }
+    fn query_state(self) -> &'tcx QueryState<'tcx, C::Key> {
+        &self.vtable.query_state
     }
 
     // Don't use this method to access query results, instead use the methods on TyCtxt.
     #[inline(always)]
-    fn query_cache(self, tcx: TyCtxt<'tcx>) -> &'tcx C {
-        // Safety:
-        // This is just manually doing the subfield referencing through pointer math.
-        unsafe {
-            &*(&tcx.query_system.caches as *const QueryCaches<'tcx>)
-                .byte_add(self.vtable.query_cache)
-                .cast::<C>()
-        }
+    fn query_cache(self) -> &'tcx C {
+        &self.vtable.query_cache
     }
 
     /// Calls `tcx.$query(key)` for this query, and discards the returned value.
@@ -245,9 +231,7 @@ pub fn query_system<'tcx>(
     incremental: bool,
 ) -> QuerySystem<'tcx> {
     QuerySystem {
-        states: Default::default(),
         arenas: Default::default(),
-        caches: Default::default(),
         query_vtables: make_query_vtables(),
         on_disk_cache,
         fns: QuerySystemFns {

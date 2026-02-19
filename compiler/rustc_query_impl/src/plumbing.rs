@@ -354,9 +354,8 @@ pub(crate) fn encode_query_results<'a, 'tcx, Q, C: QueryCache, const FLAGS: Quer
 {
     let _timer = tcx.prof.generic_activity_with_arg("encode_query_results_for", query.name());
 
-    assert!(all_inactive(query.query_state(tcx)));
-    let cache = query.query_cache(tcx);
-    cache.iter(&mut |key, value, dep_node| {
+    assert!(all_inactive(query.query_state()));
+    query.query_cache().iter(&mut |key, value, dep_node| {
         if query.will_cache_on_disk_for_key(tcx, key) {
             let dep_node = SerializedDepNodeIndex::new(dep_node.index());
 
@@ -376,7 +375,7 @@ pub(crate) fn query_key_hash_verify<'tcx, C: QueryCache, const FLAGS: QueryFlags
 ) {
     let _timer = tcx.prof.generic_activity_with_arg("query_key_hash_verify_for", query.name());
 
-    let cache = query.query_cache(tcx);
+    let cache = query.query_cache();
     let mut map = UnordMap::with_capacity(cache.len());
     cache.iter(&mut |key, _, _| {
         let node = DepNode::construct(tcx, query.dep_kind(), key);
@@ -577,8 +576,8 @@ macro_rules! define_queries {
                     eval_always: is_eval_always!([$($modifiers)*]),
                     dep_kind: dep_graph::dep_kinds::$name,
                     cycle_error_handling: cycle_error_handling!([$($modifiers)*]),
-                    query_state: std::mem::offset_of!(QueryStates<'tcx>, $name),
-                    query_cache: std::mem::offset_of!(QueryCaches<'tcx>, $name),
+                    query_state: Default::default(),
+                    query_cache: Default::default(),
                     will_cache_on_disk_for_key_fn: if_cache_on_disk!([$($modifiers)*] {
                         Some(::rustc_middle::queries::_cache_on_disk_if_fns::$name)
                     } {
@@ -673,7 +672,8 @@ macro_rules! define_queries {
                 };
 
                 // Call `gather_active_jobs_inner` to do the actual work.
-                let res = crate::execution::gather_active_jobs_inner(&tcx.query_system.states.$name,
+                let res = crate::execution::gather_active_jobs_inner(
+                    &tcx.query_system.query_vtables.$name.query_state,
                     tcx,
                     make_frame,
                     require_complete,
@@ -699,7 +699,7 @@ macro_rules! define_queries {
                 $crate::profiling_support::alloc_self_profile_query_strings_for_query_cache(
                     tcx,
                     stringify!($name),
-                    &tcx.query_system.caches.$name,
+                    &tcx.query_system.query_vtables.$name.query_cache,
                     string_cache,
                 )
             }
