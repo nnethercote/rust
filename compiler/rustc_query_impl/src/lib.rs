@@ -37,10 +37,9 @@ mod job;
 mod profiling_support;
 mod values;
 
-/// Provides access to vtable-like operations for a query
-/// (by creating a [`SemiDynamicQueryDispatcher`]),
-/// but also keeps track of the "unerased" value type of the query
-/// (i.e. the actual result type in the query declaration).
+/// Provides access to vtable-like operations for a query (by creating a
+/// `QueryVTable`), but also keeps track of the "unerased" value type of the
+/// query (i.e. the actual result type in the query declaration).
 ///
 /// This trait allows some per-query code to be defined in generic functions
 /// with a trait bound, instead of having to be defined inline within a macro
@@ -53,7 +52,7 @@ trait QueryDispatcherUnerased<'tcx, C: QueryCache> {
 
     const NAME: &'static &'static str;
 
-    fn query_dispatcher(tcx: TyCtxt<'tcx>) -> &'tcx QueryVTable<'tcx, C>;
+    fn query_vtable(tcx: TyCtxt<'tcx>) -> &'tcx QueryVTable<'tcx, C>;
 
     fn restore_val(value: C::Value) -> Self::UnerasedValue;
 }
