@@ -48,6 +48,8 @@ mod values;
 struct QueryFlags {
     /// True if this query has the `anon` modifier.
     is_anon: bool,
+    /// True if this query has the `eval_always` modifier.
+    is_eval_always: bool,
     /// True if this query has the `depth_limit` modifier.
     is_depth_limit: bool,
     /// True if this query has the `feedable` modifier.
@@ -184,7 +186,7 @@ impl<'tcx, C: QueryCache, const FLAGS: QueryFlags> SemiDynamicQueryDispatcher<'t
 
     #[inline(always)]
     fn eval_always(self) -> bool {
-        self.vtable.eval_always
+        FLAGS.is_eval_always
     }
 
     #[inline(always)]

@@ -110,14 +110,14 @@ mod non_query {
 
 /// Shared implementation of the [`DepKindVTable`] constructor for queries.
 /// Called from macro-generated code for each query.
-pub(crate) fn make_dep_kind_vtable_for_query<'tcx, Q, Cache, const FLAGS: QueryFlags>(
-    is_eval_always: bool,
-) -> DepKindVTable<'tcx>
+pub(crate) fn make_dep_kind_vtable_for_query<'tcx, Q, Cache, const FLAGS: QueryFlags>()
+-> DepKindVTable<'tcx>
 where
     Q: QueryDispatcherUnerased<'tcx, Cache, FLAGS>,
     Cache: QueryCache + 'tcx,
 {
     let is_anon = FLAGS.is_anon;
+    let is_eval_always = FLAGS.is_eval_always;
     let key_fingerprint_style = if is_anon {
         KeyFingerprintStyle::Opaque
     } else {
