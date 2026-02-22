@@ -268,6 +268,13 @@ macro_rules! item_if_cache_on_disk {
     };
 }
 
+/// Extract the description closure from the `desc` modifier, which must be present.
+macro_rules! desc_fn {
+    ([] $($item:tt)*) => { compile_error!("query missing `desc`") };
+    ([(desc { $desc_fn_closure:expr }) $($rest:tt)*]) => { $desc_fn_closure };
+    ([$other:tt $($modifiers:tt)*]) => { desc_fn! { [$($modifiers)*] } };
+}
+
 /// The deferred part of a deferred query stack frame.
 fn mk_query_stack_frame_extra<'tcx, Cache>(
     (tcx, vtable, key): (TyCtxt<'tcx>, &'tcx QueryVTable<'tcx, Cache>, Cache::Key),
@@ -597,12 +604,14 @@ macro_rules! define_queries {
                         None
                     }),
                     value_from_cycle_error: |tcx, cycle, guar| {
-                        let result: queries::$name::Value<'tcx> = Value::from_cycle_error(tcx, cycle, guar);
+                        let result: queries::$name::Value<'tcx> =
+                            Value::from_cycle_error(tcx, cycle, guar);
                         erase::erase_val(result)
                     },
                     hash_result: hash_result!([$($modifiers)*][queries::$name::Value<'tcx>]),
-                    format_value: |value| format!("{:?}", erase::restore_val::<queries::$name::Value<'tcx>>(*value)),
-                    description_fn: $crate::queries::_description_fns::$name,
+                    format_value: |value|
+                        format!("{:?}", erase::restore_val::<queries::$name::Value<'tcx>>(*value)),
+                    description_fn: desc_fn!([$($modifiers)*]),
                     execute_query_fn: if incremental {
                         query_impl::$name::get_query_incr::__rust_end_short_backtrace
                     } else {

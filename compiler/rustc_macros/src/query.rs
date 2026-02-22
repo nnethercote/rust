@@ -280,7 +280,6 @@ fn doc_comment_from_desc(list: &Punctuated<Expr, token::Comma>) -> Result<Attrib
 /// and expect to be interpolated into a dedicated module.
 #[derive(Default)]
 struct HelperTokenStreams {
-    description_fns_stream: proc_macro2::TokenStream,
     cache_on_disk_if_fns_stream: proc_macro2::TokenStream,
 }
 
@@ -304,19 +303,6 @@ fn make_helpers_for_query(query: &Query, streams: &mut HelperTokenStreams) {
             #block
         });
     }
-
-    let Desc { expr_list, .. } = &modifiers.desc;
-
-    let desc = quote! {
-        #[allow(unused_variables)]
-        pub fn #erased_name<'tcx>(tcx: TyCtxt<'tcx>, #key_pat: #key_ty) -> String {
-            format!(#expr_list)
-        }
-    };
-
-    streams.description_fns_stream.extend(quote! {
-        #desc
-    });
 }
 
 /// Add hints for rust-analyzer
@@ -413,7 +399,7 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
     }
 
     for query in queries.0 {
-        let Query { doc_comments, name, key_ty, return_ty, modifiers, .. } = &query;
+        let Query { doc_comments, name, key_pat, key_ty, return_ty, modifiers, .. } = &query;
 
         // Normalize an absent return type into `-> ()` to make macro-rules parsing easier.
         let return_ty = match return_ty {
@@ -430,6 +416,10 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
                 }; )+
             }
         }
+
+        // Put a description closure inside the `desc` modifier: `(desc { <closure> })`.
+        let expr_list = &modifiers.desc.expr_list;
+        modifiers_out.push(quote! { (desc { |tcx, #key_pat| format!(#expr_list) }) });
 
         passthrough!(
             arena_cache,
@@ -485,7 +475,7 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
         make_helpers_for_query(&query, &mut helpers);
     }
 
-    let HelperTokenStreams { description_fns_stream, cache_on_disk_if_fns_stream } = helpers;
+    let HelperTokenStreams { cache_on_disk_if_fns_stream } = helpers;
 
     TokenStream::from(quote! {
         /// Higher-order macro that invokes the specified macro with a prepared
@@ -514,17 +504,6 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
         mod _analyzer_hints {
             use super::*;
             #analyzer_stream
-        }
-
-        /// Functions that format a human-readable description of each query
-        /// and its key, as specified by the `desc` query modifier.
-        ///
-        /// (The leading `_` avoids collisions with actual query names when
-        /// expanded in `rustc_middle::queries`, and makes this macro-generated
-        /// module easier to search for.)
-        pub mod _description_fns {
-            use super::*;
-            #description_fns_stream
         }
 
         // FIXME(Zalathar): Instead of declaring these functions directly, can

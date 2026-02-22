@@ -9,12 +9,17 @@
 // tidy-alphabetical-end
 
 use rustc_data_structures::sync::AtomicU64;
+use rustc_hir::def::DefKind;
+use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_middle::dep_graph;
 use rustc_middle::queries::{self, ExternProviders, Providers};
 use rustc_middle::query::on_disk_cache::{CacheEncoder, EncodedDepNodeIndex, OnDiskCache};
 use rustc_middle::query::plumbing::{QuerySystem, QuerySystemFns, QueryVTable};
-use rustc_middle::query::{AsLocalKey, QueryCache, QueryMode};
-use rustc_middle::ty::TyCtxt;
+use rustc_middle::query::{
+    AsLocalKey, QueryCache, QueryMode, describe_as_module,
+};
+use rustc_middle::ty::print::PrintTraitRefExt;
+use rustc_middle::ty::{self, TyCtxt};
 use rustc_span::Span;
 
 pub use crate::dep_kind_vtables::make_dep_kind_vtables;
