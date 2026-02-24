@@ -5,13 +5,17 @@
 #![feature(core_intrinsics)]
 #![feature(min_specialization)]
 #![feature(rustc_attrs)]
+#![feature(stmt_expr_attributes)]
 #![feature(try_blocks)]
 // tidy-alphabetical-end
 
+use rustc_ast::tokenstream::TokenStream;
 use rustc_data_structures::sync::AtomicU64;
 use rustc_hir::def::DefKind;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_middle::dep_graph;
+use rustc_middle::mir::interpret::GlobalId;
+use rustc_middle::mir::mono::CollectionMode;
 use rustc_middle::queries::{self, ExternProviders, Providers};
 use rustc_middle::query::on_disk_cache::{CacheEncoder, EncodedDepNodeIndex, OnDiskCache};
 use rustc_middle::query::plumbing::{QuerySystem, QuerySystemFns, QueryVTable};
@@ -19,8 +23,9 @@ use rustc_middle::query::{
     AsLocalKey, QueryCache, QueryMode, describe_as_module,
 };
 use rustc_middle::ty::print::PrintTraitRefExt;
-use rustc_middle::ty::{self, TyCtxt};
-use rustc_span::Span;
+use rustc_middle::ty::{self, PseudoCanonicalInput, TyCtxt};
+use rustc_span::def_id::{CrateNum, DefId, LocalDefId, LocalModDefId};
+use rustc_span::{LocalExpnId, Span};
 
 pub use crate::dep_kind_vtables::make_dep_kind_vtables;
 pub use crate::job::{QueryJobMap, break_query_cycles, print_query_stack};

@@ -273,38 +273,6 @@ fn doc_comment_from_desc(list: &Punctuated<Expr, token::Comma>) -> Result<Attrib
     Ok(parse_quote! { #[doc = #doc_string] })
 }
 
-/// Contains token streams that are used to accumulate per-query helper
-/// functions, to be used by the final output of `rustc_queries!`.
-///
-/// Helper items typically have the same name as the query they relate to,
-/// and expect to be interpolated into a dedicated module.
-#[derive(Default)]
-struct HelperTokenStreams {
-    cache_on_disk_if_fns_stream: proc_macro2::TokenStream,
-}
-
-fn make_helpers_for_query(query: &Query, streams: &mut HelperTokenStreams) {
-    let Query { name, key_pat, key_ty, modifiers, .. } = &query;
-
-    // Replace span for `name` to make rust-analyzer ignore it.
-    let mut erased_name = name.clone();
-    erased_name.set_span(Span::call_site());
-
-    // Generate a function to check whether we should cache the query to disk, for some key.
-    if let Some(CacheOnDiskIf { block, .. }) = modifiers.cache_on_disk_if.as_ref() {
-        // `pass_by_value`: some keys are marked with `rustc_pass_by_value`, but we take keys by
-        // reference here.
-        // FIXME: `pass_by_value` is badly named; `allow(rustc::pass_by_value)` actually means
-        // "allow pass by reference of `rustc_pass_by_value` types".
-        streams.cache_on_disk_if_fns_stream.extend(quote! {
-            #[allow(unused_variables, rustc::pass_by_value)]
-            #[inline]
-            pub fn #erased_name<'tcx>(tcx: TyCtxt<'tcx>, #key_pat: &#key_ty) -> bool
-            #block
-        });
-    }
-}
-
 /// Add hints for rust-analyzer
 fn add_to_analyzer_stream(query: &Query, analyzer_stream: &mut proc_macro2::TokenStream) {
     // Add links to relevant modifiers
@@ -384,7 +352,6 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
     let queries = parse_macro_input!(input as List<Query>);
 
     let mut query_stream = quote! {};
-    let mut helpers = HelperTokenStreams::default();
     let mut analyzer_stream = quote! {};
     let mut errors = quote! {};
 
@@ -435,11 +402,23 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
             return_result_from_ensure_ok,
         );
 
-        // If there was a `cache_on_disk_if` modifier in the real input, pass
-        // on a synthetic `(cache_on_disk)` modifier that can be inspected by
-        // macro-rules macros.
-        if modifiers.cache_on_disk_if.is_some() {
-            modifiers_out.push(quote! { (cache_on_disk) });
+        // If there was a `cache_on_disk_if` modifier, put a closure inside it:
+        // `(cache_on_disk { <closure > }`.
+        if let Some(CacheOnDiskIf { block, .. }) = &modifiers.cache_on_disk_if {
+            modifiers_out.push(quote! {
+                (cache_on_disk_if { 
+                    // `pass_by_value`: some keys are marked with `rustc_pass_by_value`, but we
+                    // take keys by reference here.
+                    // FIXME: `pass_by_value` is badly named; `allow(rustc::pass_by_value)`
+                    // actually means "allow pass by reference of `rustc_pass_by_value` types".
+                    //
+                    // The type annotations are required to avoid compile errors, which is annoying
+                    // because it necessitates extra `use` items in the file using
+                    // `rustc_with_all_queries!`.
+                    #[allow(rustc::pass_by_value)]
+                    |tcx: TyCtxt<'_>, #key_pat: &#key_ty| #block
+                })
+            });
         }
 
         // This uses the span of the query definition for the commas,
@@ -472,10 +451,7 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
         }
 
         add_to_analyzer_stream(&query, &mut analyzer_stream);
-        make_helpers_for_query(&query, &mut helpers);
     }
-
-    let HelperTokenStreams { cache_on_disk_if_fns_stream } = helpers;
 
     TokenStream::from(quote! {
         /// Higher-order macro that invokes the specified macro with a prepared
@@ -504,14 +480,6 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
         mod _analyzer_hints {
             use super::*;
             #analyzer_stream
-        }
-
-        // FIXME(Zalathar): Instead of declaring these functions directly, can
-        // we put them in a macro and then expand that macro downstream in
-        // `rustc_query_impl`, where the functions are actually used?
-        pub mod _cache_on_disk_if_fns {
-            use super::*;
-            #cache_on_disk_if_fns_stream
         }
 
         #errors

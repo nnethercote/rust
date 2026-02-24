@@ -139,8 +139,10 @@ pub struct QueryVTable<'tcx, C: QueryCache> {
         prev_index: SerializedDepNodeIndex,
         index: DepNodeIndex,
     ) -> Option<C::Value>,
+
     pub is_loadable_from_disk_fn:
         fn(tcx: TyCtxt<'tcx>, key: &C::Key, index: SerializedDepNodeIndex) -> bool,
+
     pub hash_result: HashResult<C::Value>,
     pub value_from_cycle_error:
         fn(tcx: TyCtxt<'tcx>, cycle_error: &CycleError, guar: ErrorGuaranteed) -> C::Value,

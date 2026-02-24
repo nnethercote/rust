@@ -242,29 +242,42 @@ macro_rules! call_provider {
 
 /// Expands to one of two token trees, depending on whether the current query
 /// has the `cache_on_disk_if` modifier.
-macro_rules! if_cache_on_disk {
+macro_rules! if_cache_on_disk_if {
     ([] $yes:tt $no:tt) => {
         $no
     };
-    // The `cache_on_disk_if` modifier generates a synthetic `(cache_on_disk)`,
-    // modifier, for use by this macro and similar macros.
-    ([(cache_on_disk) $($rest:tt)*] $yes:tt $no:tt) => {
+    // Ignore the closure.
+    ([(cache_on_disk_if { $_:expr }) $($rest:tt)*] $yes:tt $no:tt) => {
         $yes
     };
     ([$other:tt $($modifiers:tt)*] $yes:tt $no:tt) => {
-        if_cache_on_disk!([$($modifiers)*] $yes $no)
+        if_cache_on_disk_if!([$($modifiers)*] $yes $no)
+    };
+}
+
+/// Extract the closure from the `cache_on_disk_if` modifier if present, otherwise generate a
+/// trivial failing closure.
+macro_rules! cache_on_disk_if_fn {
+    ([] $($item:tt)*) => {
+        |_tcx, _key| false
+    };
+    ([(cache_on_disk_if { $cache_closure:expr }) $($rest:tt)*]) => {
+        $cache_closure
+    };
+    ([$other:tt $($modifiers:tt)*]) => {
+        cache_on_disk_if_fn! { [$($modifiers)*] }
     };
 }
 
 /// Conditionally expands to some token trees, if the current query has the
 /// `cache_on_disk_if` modifier.
-macro_rules! item_if_cache_on_disk {
+macro_rules! item_if_cache_on_disk_if {
     ([] $($item:tt)*) => {};
-    ([(cache_on_disk) $($rest:tt)*] $($item:tt)*) => {
+    ([(cache_on_disk_if { $_:expr }) $($rest:tt)*] $($item:tt)*) => {
         $($item)*
     };
     ([$other:tt $($modifiers:tt)*] $($item:tt)*) => {
-        item_if_cache_on_disk! { [$($modifiers)*] $($item)* }
+        item_if_cache_on_disk_if! { [$($modifiers)*] $($item)* }
     };
 }
 
@@ -568,21 +581,18 @@ macro_rules! define_queries {
                     cycle_error_handling: cycle_error_handling!([$($modifiers)*]),
                     state: Default::default(),
                     cache: Default::default(),
-                    will_cache_on_disk_for_key_fn: if_cache_on_disk!([$($modifiers)*] {
-                        rustc_middle::queries::_cache_on_disk_if_fns::$name
-                    } {
-                        |_tcx, _key| false
-                    }),
+                    will_cache_on_disk_for_key_fn: cache_on_disk_if_fn!([$($modifiers)*]),
                     call_query_method_fn: |tcx, key| {
                         // Call the query method for its side-effect of loading a value
                         // from disk-cache; the caller doesn't need the value.
                         let _ = tcx.$name(key);
                     },
                     invoke_provider_fn: self::invoke_provider_fn::__rust_begin_short_backtrace,
-                    try_load_from_disk_fn: if_cache_on_disk!([$($modifiers)*] {
+                    try_load_from_disk_fn: if_cache_on_disk_if!([$($modifiers)*] {
                         |tcx, key, prev_index, index| {
                             // Check the `cache_on_disk_if` condition for this key.
-                            if !::rustc_middle::queries::_cache_on_disk_if_fns::$name(tcx, &key) {
+                            let cache_on_disk_if_fn = cache_on_disk_if_fn!([$($modifiers)*]);
+                            if !cache_on_disk_if_fn(tcx, key) {
                                 return None;
                             }
 
@@ -595,9 +605,10 @@ macro_rules! define_queries {
                     } {
                         |_tcx, _key, _prev_index, _index| None
                     }),
-                    is_loadable_from_disk_fn: if_cache_on_disk!([$($modifiers)*] {
+                    is_loadable_from_disk_fn: if_cache_on_disk_if!([$($modifiers)*] {
                         |tcx, key, index| -> bool {
-                            ::rustc_middle::queries::_cache_on_disk_if_fns::$name(tcx, &key) &&
+                            let cache_on_disk_if_fn = cache_on_disk_if_fn!([$($modifiers)*]);
+                            cache_on_disk_if_fn(tcx, key) &&
                                 $crate::plumbing::loadable_from_disk(tcx, index)
                         }
                     } {
@@ -678,7 +689,7 @@ macro_rules! define_queries {
                 )
             }
 
-            item_if_cache_on_disk! { [$($modifiers)*]
+            item_if_cache_on_disk_if! { [$($modifiers)*]
                 pub(crate) fn encode_query_results<'tcx>(
                     tcx: TyCtxt<'tcx>,
                     encoder: &mut CacheEncoder<'_, 'tcx>,
@@ -739,7 +750,7 @@ macro_rules! define_queries {
             >
         ] = &[
             $(
-                if_cache_on_disk!([$($modifiers)*] {
+                if_cache_on_disk_if!([$($modifiers)*] {
                     Some(query_impl::$name::encode_query_results)
                 } {
                     None
