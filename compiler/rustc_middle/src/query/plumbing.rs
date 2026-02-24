@@ -63,18 +63,6 @@ pub enum CycleErrorHandling {
     Stash,
 }
 
-pub type WillCacheOnDiskForKeyFn<'tcx, Key> = fn(tcx: TyCtxt<'tcx>, key: &Key) -> bool;
-
-pub type TryLoadFromDiskFn<'tcx, Key, Value> = fn(
-    tcx: TyCtxt<'tcx>,
-    key: &Key,
-    prev_index: SerializedDepNodeIndex,
-    index: DepNodeIndex,
-) -> Option<Value>;
-
-pub type IsLoadableFromDiskFn<'tcx, Key> =
-    fn(tcx: TyCtxt<'tcx>, key: &Key, index: SerializedDepNodeIndex) -> bool;
-
 pub type HashResult<V> = Option<fn(&mut StableHashingContext<'_>, &V) -> Fingerprint>;
 
 #[derive(Clone, Debug)]
@@ -129,7 +117,7 @@ pub struct QueryVTable<'tcx, C: QueryCache> {
     pub cycle_error_handling: CycleErrorHandling,
     pub state: QueryState<'tcx, C::Key>,
     pub cache: C,
-    pub will_cache_on_disk_for_key_fn: Option<WillCacheOnDiskForKeyFn<'tcx, C::Key>>,
+    pub will_cache_on_disk_for_key_fn: fn(tcx: TyCtxt<'tcx>, key: &C::Key) -> bool,
 
     /// Function pointer that calls `tcx.$query(key)` for this query and
     /// discards the returned value.
@@ -145,8 +133,14 @@ pub struct QueryVTable<'tcx, C: QueryCache> {
     /// This should be the only code that calls the provider function.
     pub invoke_provider_fn: fn(tcx: TyCtxt<'tcx>, key: C::Key) -> C::Value,
 
-    pub try_load_from_disk_fn: Option<TryLoadFromDiskFn<'tcx, C::Key, C::Value>>,
-    pub is_loadable_from_disk_fn: Option<IsLoadableFromDiskFn<'tcx, C::Key>>,
+    pub try_load_from_disk_fn: fn(
+        tcx: TyCtxt<'tcx>,
+        key: &C::Key,
+        prev_index: SerializedDepNodeIndex,
+        index: DepNodeIndex,
+    ) -> Option<C::Value>,
+    pub is_loadable_from_disk_fn:
+        fn(tcx: TyCtxt<'tcx>, key: &C::Key, index: SerializedDepNodeIndex) -> bool,
     pub hash_result: HashResult<C::Value>,
     pub value_from_cycle_error:
         fn(tcx: TyCtxt<'tcx>, cycle_error: &CycleError, guar: ErrorGuaranteed) -> C::Value,
@@ -176,7 +170,7 @@ impl<'tcx, C: QueryCache> fmt::Debug for QueryVTable<'tcx, C> {
 impl<'tcx, C: QueryCache> QueryVTable<'tcx, C> {
     #[inline(always)]
     pub fn will_cache_on_disk_for_key(&self, tcx: TyCtxt<'tcx>, key: &C::Key) -> bool {
-        self.will_cache_on_disk_for_key_fn.map_or(false, |f| f(tcx, key))
+        (self.will_cache_on_disk_for_key_fn)(tcx, key)
     }
 
     #[inline(always)]
@@ -187,8 +181,7 @@ impl<'tcx, C: QueryCache> QueryVTable<'tcx, C> {
         prev_index: SerializedDepNodeIndex,
         index: DepNodeIndex,
     ) -> Option<C::Value> {
-        // `?` will return None immediately for queries that never cache to disk.
-        self.try_load_from_disk_fn?(tcx, key, prev_index, index)
+        (self.try_load_from_disk_fn)(tcx, key, prev_index, index)
     }
 
     #[inline]
@@ -198,7 +191,7 @@ impl<'tcx, C: QueryCache> QueryVTable<'tcx, C> {
         key: &C::Key,
         index: SerializedDepNodeIndex,
     ) -> bool {
-        self.is_loadable_from_disk_fn.map_or(false, |f| f(tcx, key, index))
+        (self.is_loadable_from_disk_fn)(tcx, key, index)
     }
 
     /// Synthesize an error value to let compilation continue after a cycle.

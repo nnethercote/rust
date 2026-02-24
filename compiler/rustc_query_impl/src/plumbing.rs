@@ -569,9 +569,9 @@ macro_rules! define_queries {
                     state: Default::default(),
                     cache: Default::default(),
                     will_cache_on_disk_for_key_fn: if_cache_on_disk!([$($modifiers)*] {
-                        Some(::rustc_middle::queries::_cache_on_disk_if_fns::$name)
+                        rustc_middle::queries::_cache_on_disk_if_fns::$name
                     } {
-                        None
+                        |_tcx, _key| false
                     }),
                     call_query_method_fn: |tcx, key| {
                         // Call the query method for its side-effect of loading a value
@@ -580,9 +580,9 @@ macro_rules! define_queries {
                     },
                     invoke_provider_fn: self::invoke_provider_fn::__rust_begin_short_backtrace,
                     try_load_from_disk_fn: if_cache_on_disk!([$($modifiers)*] {
-                        Some(|tcx, key, prev_index, index| {
+                        |tcx, key, prev_index, index| {
                             // Check the `cache_on_disk_if` condition for this key.
-                            if !::rustc_middle::queries::_cache_on_disk_if_fns::$name(tcx, key) {
+                            if !::rustc_middle::queries::_cache_on_disk_if_fns::$name(tcx, &key) {
                                 return None;
                             }
 
@@ -591,17 +591,17 @@ macro_rules! define_queries {
 
                             // Arena-alloc the value if appropriate, and erase it.
                             Some(queries::$name::provided_to_erased(tcx, value))
-                        })
+                        }
                     } {
-                        None
+                        |_tcx, _key, _prev_index, _index| None
                     }),
                     is_loadable_from_disk_fn: if_cache_on_disk!([$($modifiers)*] {
-                        Some(|tcx, key, index| -> bool {
-                            ::rustc_middle::queries::_cache_on_disk_if_fns::$name(tcx, key) &&
+                        |tcx, key, index| -> bool {
+                            ::rustc_middle::queries::_cache_on_disk_if_fns::$name(tcx, &key) &&
                                 $crate::plumbing::loadable_from_disk(tcx, index)
-                        })
+                        }
                     } {
-                        None
+                        |_tcx, _key, _index| false
                     }),
                     value_from_cycle_error: |tcx, cycle, guar| {
                         let result: queries::$name::Value<'tcx> =
