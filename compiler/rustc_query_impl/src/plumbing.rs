@@ -358,7 +358,7 @@ pub(crate) fn encode_query_results_inner<'a, 'tcx, C, V>(
 
     assert!(all_inactive(&query.state));
     query.cache.iter(&mut |key, value, dep_node| {
-        if query.will_cache_on_disk_for_key(tcx, key) {
+        if (query.will_cache_on_disk_for_key_fn)(tcx, key) {
             let dep_node = SerializedDepNodeIndex::new(dep_node.index());
 
             // Record position of the cache entry.
@@ -411,7 +411,7 @@ pub(crate) fn try_load_from_on_disk_cache_inner<'tcx, C: QueryCache>(
             dep_node.key_fingerprint
         )
     });
-    if query.will_cache_on_disk_for_key(tcx, &key) {
+    if (query.will_cache_on_disk_for_key_fn)(tcx, &key) {
         // Call `tcx.$query(key)` for its side-effect of loading the disk-cached
         // value into memory.
         (query.call_query_method_fn)(tcx, key);

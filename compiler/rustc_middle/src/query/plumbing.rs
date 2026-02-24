@@ -170,42 +170,6 @@ impl<'tcx, C: QueryCache> fmt::Debug for QueryVTable<'tcx, C> {
 }
 
 impl<'tcx, C: QueryCache> QueryVTable<'tcx, C> {
-    #[inline(always)]
-    pub fn will_cache_on_disk_for_key(&self, tcx: TyCtxt<'tcx>, key: &C::Key) -> bool {
-        (self.will_cache_on_disk_for_key_fn)(tcx, key)
-    }
-
-    #[inline(always)]
-    pub fn try_load_from_disk(
-        &self,
-        tcx: TyCtxt<'tcx>,
-        key: &C::Key,
-        prev_index: SerializedDepNodeIndex,
-        index: DepNodeIndex,
-    ) -> Option<C::Value> {
-        (self.try_load_from_disk_fn)(tcx, key, prev_index, index)
-    }
-
-    #[inline]
-    pub fn is_loadable_from_disk(
-        &self,
-        tcx: TyCtxt<'tcx>,
-        key: &C::Key,
-        index: SerializedDepNodeIndex,
-    ) -> bool {
-        (self.is_loadable_from_disk_fn)(tcx, key, index)
-    }
-
-    /// Synthesize an error value to let compilation continue after a cycle.
-    pub fn value_from_cycle_error(
-        &self,
-        tcx: TyCtxt<'tcx>,
-        cycle_error: &CycleError,
-        guar: ErrorGuaranteed,
-    ) -> C::Value {
-        (self.value_from_cycle_error)(tcx, cycle_error, guar)
-    }
-
     pub fn construct_dep_node(&self, tcx: TyCtxt<'tcx>, key: &C::Key) -> DepNode {
         DepNode::construct(tcx, self.dep_kind, key)
     }

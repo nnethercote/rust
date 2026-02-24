@@ -19,9 +19,7 @@ use rustc_middle::mir::mono::CollectionMode;
 use rustc_middle::queries::{self, ExternProviders, Providers};
 use rustc_middle::query::on_disk_cache::{CacheEncoder, EncodedDepNodeIndex, OnDiskCache};
 use rustc_middle::query::plumbing::{QuerySystem, QuerySystemFns, QueryVTable};
-use rustc_middle::query::{
-    AsLocalKey, QueryCache, QueryMode, describe_as_module,
-};
+use rustc_middle::query::{AsLocalKey, QueryCache, QueryMode, describe_as_module};
 use rustc_middle::ty::print::PrintTraitRefExt;
 use rustc_middle::ty::{self, PseudoCanonicalInput, TyCtxt};
 use rustc_span::def_id::{CrateNum, DefId, LocalDefId, LocalModDefId};

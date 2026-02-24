@@ -406,7 +406,7 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
         // `(cache_on_disk { <closure > }`.
         if let Some(CacheOnDiskIf { block, .. }) = &modifiers.cache_on_disk_if {
             modifiers_out.push(quote! {
-                (cache_on_disk_if { 
+                (cache_on_disk_if {
                     // `pass_by_value`: some keys are marked with `rustc_pass_by_value`, but we
                     // take keys by reference here.
                     // FIXME: `pass_by_value` is badly named; `allow(rustc::pass_by_value)`

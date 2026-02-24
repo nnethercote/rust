@@ -120,7 +120,7 @@ fn handle_cycle_error<'tcx, C: QueryCache>(
     match query.cycle_error_handling {
         CycleErrorHandling::Error => {
             let guar = error.emit();
-            query.value_from_cycle_error(tcx, cycle_error, guar)
+            (query.value_from_cycle_error)(tcx, cycle_error, guar)
         }
         CycleErrorHandling::Fatal => {
             error.emit();
@@ -129,7 +129,7 @@ fn handle_cycle_error<'tcx, C: QueryCache>(
         }
         CycleErrorHandling::DelayBug => {
             let guar = error.delay_as_bug();
-            query.value_from_cycle_error(tcx, cycle_error, guar)
+            (query.value_from_cycle_error)(tcx, cycle_error, guar)
         }
         CycleErrorHandling::Stash => {
             let guar = if let Some(root) = cycle_error.cycle.first()
@@ -139,7 +139,7 @@ fn handle_cycle_error<'tcx, C: QueryCache>(
             } else {
                 error.emit()
             };
-            query.value_from_cycle_error(tcx, cycle_error, guar)
+            (query.value_from_cycle_error)(tcx, cycle_error, guar)
         }
     }
 }
@@ -506,7 +506,9 @@ fn try_load_from_disk_and_cache_in_memory<'tcx, C: QueryCache>(
 
     // First we try to load the result from the on-disk cache.
     // Some things are never cached on disk.
-    if let Some(result) = query.try_load_from_disk(tcx, key, prev_dep_node_index, dep_node_index) {
+    if let Some(result) =
+        (query.try_load_from_disk_fn)(tcx, key, prev_dep_node_index, dep_node_index)
+    {
         if std::intrinsics::unlikely(tcx.sess.opts.unstable_opts.query_dep_graph) {
             dep_graph_data.mark_debug_loaded_from_disk(*dep_node)
         }
@@ -539,7 +541,7 @@ fn try_load_from_disk_and_cache_in_memory<'tcx, C: QueryCache>(
     // We always expect to find a cached result for things that
     // can be forced from `DepNode`.
     debug_assert!(
-        !query.will_cache_on_disk_for_key(tcx, key)
+        !(query.will_cache_on_disk_for_key_fn)(tcx, key)
             || !tcx.key_fingerprint_style(dep_node.kind).reconstructible(),
         "missing on-disk cache entry for {dep_node:?}"
     );
@@ -547,7 +549,7 @@ fn try_load_from_disk_and_cache_in_memory<'tcx, C: QueryCache>(
     // Sanity check for the logic in `ensure`: if the node is green and the result loadable,
     // we should actually be able to load it.
     debug_assert!(
-        !query.is_loadable_from_disk(tcx, key, prev_dep_node_index),
+        !(query.is_loadable_from_disk_fn)(tcx, key, prev_dep_node_index),
         "missing on-disk cache entry for loadable {dep_node:?}"
     );
 
@@ -644,7 +646,7 @@ fn check_if_ensure_can_skip_execution<'tcx, C: QueryCache>(
             // In ensure-done mode, we can only skip execution for this key if
             // there's a disk-cached value available to load later if needed,
             // which guarantees the query provider will never run for this key.
-            let is_loadable = query.is_loadable_from_disk(tcx, key, serialized_dep_node_index);
+            let is_loadable = (query.is_loadable_from_disk_fn)(tcx, key, serialized_dep_node_index);
             EnsureCanSkip { skip_execution: is_loadable, dep_node: Some(dep_node) }
         }
     }
