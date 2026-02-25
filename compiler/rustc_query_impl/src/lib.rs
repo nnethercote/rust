@@ -21,7 +21,6 @@ pub use crate::dep_kind_vtables::make_dep_kind_vtables;
 pub use crate::job::{QueryJobMap, break_query_cycles, print_query_stack};
 use crate::plumbing::{encode_all_query_results, try_mark_green};
 use crate::profiling_support::QueryKeyStringCache;
-pub use crate::profiling_support::alloc_self_profile_query_strings;
 use crate::values::Value;
 
 #[macro_use]
