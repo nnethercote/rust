@@ -134,16 +134,6 @@ pub(super) fn encode_all_query_results<'tcx>(
     }
 }
 
-pub fn query_key_hash_verify_all<'tcx>(tcx: TyCtxt<'tcx>) {
-    if tcx.sess.opts.unstable_opts.incremental_verify_ich || cfg!(debug_assertions) {
-        tcx.sess.time("query_key_hash_verify_all", || {
-            for verify in super::QUERY_KEY_HASH_VERIFY.iter() {
-                verify(tcx);
-            }
-        })
-    }
-}
-
 macro_rules! cycle_error_handling {
     ([]) => {{
         rustc_middle::query::CycleErrorHandling::Error
@@ -689,13 +679,6 @@ macro_rules! define_queries {
                     )
                 }
             }
-
-            pub(crate) fn query_key_hash_verify<'tcx>(tcx: TyCtxt<'tcx>) {
-                $crate::plumbing::query_key_hash_verify(
-                    &tcx.query_system.query_vtables.$name,
-                    tcx,
-                )
-            }
         })*}
 
         pub fn make_query_vtables<'tcx>(incremental: bool) -> queries::QueryVTables<'tcx> {
@@ -744,9 +727,18 @@ macro_rules! define_queries {
             ),*
         ];
 
-        const QUERY_KEY_HASH_VERIFY: &[
-            for<'tcx> fn(TyCtxt<'tcx>)
-        ] = &[$(query_impl::$name::query_key_hash_verify),*];
+        pub fn query_key_hash_verify_all<'tcx>(tcx: TyCtxt<'tcx>) {
+            if tcx.sess.opts.unstable_opts.incremental_verify_ich || cfg!(debug_assertions) {
+                tcx.sess.time("query_key_hash_verify_all", || {
+                    $(
+                        $crate::plumbing::query_key_hash_verify(
+                            &tcx.query_system.query_vtables.$name,
+                            tcx
+                        );
+                    )*
+                })
+            }
+        }
 
         /// Declares a dep-kind vtable constructor for each query.
         mod _dep_kind_vtable_ctors_for_queries {
