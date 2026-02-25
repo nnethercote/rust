@@ -16,11 +16,10 @@ use rustc_middle::ty::TyCtxt;
 use rustc_middle::verify_ich::incremental_verify_ich;
 use rustc_span::{DUMMY_SP, Span};
 
+use crate::collect_active_jobs_from_all_queries;
 use crate::dep_graph::{DepNode, DepNodeIndex};
 use crate::job::{QueryJobInfo, QueryJobMap, find_cycle_in_stack, report_cycle};
-use crate::plumbing::{
-    collect_active_jobs_from_all_queries, current_query_job, next_job_id, start_query,
-};
+use crate::plumbing::{current_query_job, next_job_id, start_query};
 
 #[inline]
 fn equivalent_key<K: Eq, V>(k: &K) -> impl Fn(&(K, V)) -> bool + '_ {
@@ -44,8 +43,12 @@ pub(crate) fn all_inactive<'tcx, K>(state: &QueryState<'tcx, K>) -> bool {
 
 /// Internal plumbing for collecting the set of active jobs for this query.
 ///
-/// Should only be called from `gather_active_jobs`.
-pub(crate) fn gather_active_jobs_inner<'tcx, C>(
+/// Should only be called from `collect_active_jobs_from_all_queries`.
+///
+/// (We arbitrarily use the word "gather" when collecting the jobs for
+/// each individual query, so that we have distinct function names to
+/// grep for.)
+pub(crate) fn gather_active_jobs<'tcx, C>(
     query: &'tcx QueryVTable<'tcx, C>,
     tcx: TyCtxt<'tcx>,
     require_complete: bool,

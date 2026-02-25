@@ -29,9 +29,10 @@ use rustc_middle::ty::{self, TyCtxt};
 use rustc_serialize::{Decodable, Encodable};
 use rustc_span::def_id::LOCAL_CRATE;
 
+use crate::collect_active_jobs_from_all_queries;
 use crate::error::{QueryOverflow, QueryOverflowNote};
 use crate::execution::{all_inactive, force_query};
-use crate::job::{QueryJobMap, find_dep_kind_root};
+use crate::job::find_dep_kind_root;
 
 fn depth_limit_error<'tcx>(tcx: TyCtxt<'tcx>, job: QueryJobId) {
     let job_map =
@@ -92,32 +93,6 @@ pub(crate) fn start_query<'tcx, R>(
         // Use the `ImplicitCtxt` while we execute the query.
         tls::enter_context(&new_icx, compute)
     })
-}
-
-/// Returns a map of currently active query jobs, collected from all queries.
-///
-/// If `require_complete` is `true`, this function locks all shards of the
-/// query results to produce a complete map, which always returns `Ok`.
-/// Otherwise, it may return an incomplete map as an error if any shard
-/// lock cannot be acquired.
-///
-/// Prefer passing `false` to `require_complete` to avoid potential deadlocks,
-/// especially when called from within a deadlock handler, unless a
-/// complete map is needed and no deadlock is possible at this call site.
-pub fn collect_active_jobs_from_all_queries<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    require_complete: bool,
-) -> Result<QueryJobMap<'tcx>, QueryJobMap<'tcx>> {
-    let mut job_map_out = QueryJobMap::default();
-    let mut complete = true;
-
-    for gather_fn in crate::PER_QUERY_GATHER_ACTIVE_JOBS_FNS.iter() {
-        if gather_fn(tcx, require_complete, &mut job_map_out).is_none() {
-            complete = false;
-        }
-    }
-
-    if complete { Ok(job_map_out) } else { Err(job_map_out) }
 }
 
 pub(super) fn try_mark_green<'tcx>(tcx: TyCtxt<'tcx>, dep_node: &DepNode) -> bool {
@@ -618,22 +593,6 @@ macro_rules! define_queries {
                 }
             }
 
-            /// Internal per-query plumbing for collecting the set of active jobs for this query.
-            ///
-            /// Should only be called through `PER_QUERY_GATHER_ACTIVE_JOBS_FNS`.
-            pub(crate) fn gather_active_jobs<'tcx>(
-                tcx: TyCtxt<'tcx>,
-                require_complete: bool,
-                job_map_out: &mut QueryJobMap<'tcx>,
-            ) -> Option<()> {
-                crate::execution::gather_active_jobs_inner(
-                    &tcx.query_system.query_vtables.$name,
-                    tcx,
-                    require_complete,
-                    job_map_out,
-                )
-            }
-
             pub(crate) fn alloc_self_profile_query_strings<'tcx>(
                 tcx: TyCtxt<'tcx>,
                 string_cache: &mut QueryKeyStringCache
@@ -672,21 +631,37 @@ macro_rules! define_queries {
 
         // These arrays are used for iteration and can't be indexed by `DepKind`.
 
-        /// Used by `collect_active_jobs_from_all_queries` to iterate over all
-        /// queries, and gather the active jobs for each query.
+        /// Returns a map of currently active query jobs, collected from all queries.
         ///
-        /// (We arbitrarily use the word "gather" when collecting the jobs for
-        /// each individual query, so that we have distinct function names to
-        /// grep for.)
-        const PER_QUERY_GATHER_ACTIVE_JOBS_FNS: &[
-            for<'tcx> fn(
-                tcx: TyCtxt<'tcx>,
-                require_complete: bool,
-                job_map_out: &mut QueryJobMap<'tcx>,
-            ) -> Option<()>
-        ] = &[
-            $( $crate::query_impl::$name::gather_active_jobs ),*
-        ];
+        /// If `require_complete` is `true`, this function locks all shards of the
+        /// query results to produce a complete map, which always returns `Ok`.
+        /// Otherwise, it may return an incomplete map as an error if any shard
+        /// lock cannot be acquired.
+        ///
+        /// Prefer passing `false` to `require_complete` to avoid potential deadlocks,
+        /// especially when called from within a deadlock handler, unless a
+        /// complete map is needed and no deadlock is possible at this call site.
+        pub fn collect_active_jobs_from_all_queries<'tcx>(
+            tcx: TyCtxt<'tcx>,
+            require_complete: bool,
+        ) -> Result<QueryJobMap<'tcx>, QueryJobMap<'tcx>> {
+            let mut job_map_out = QueryJobMap::default();
+            let mut complete = true;
+
+            $(
+                let res = crate::execution::gather_active_jobs(
+                    &tcx.query_system.query_vtables.$name,
+                    tcx,
+                    require_complete,
+                    &mut job_map_out,
+                );
+                if res.is_none() {
+                    complete = false;
+                }
+            )*
+
+            if complete { Ok(job_map_out) } else { Err(job_map_out) }
+        }
 
         const ALLOC_SELF_PROFILE_QUERY_STRINGS: &[
             for<'tcx> fn(TyCtxt<'tcx>, &mut QueryKeyStringCache)
