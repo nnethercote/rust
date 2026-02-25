@@ -3,13 +3,14 @@ use std::mem;
 
 use rustc_data_structures::hash_table::{Entry, HashTable};
 use rustc_data_structures::stack::ensure_sufficient_stack;
+use rustc_data_structures::sync::{DynSend, DynSync};
 use rustc_data_structures::{outline, sharded, sync};
 use rustc_errors::{Diag, FatalError, StashKey};
 use rustc_middle::dep_graph::{DepGraphData, DepNodeKey};
 use rustc_middle::query::plumbing::QueryVTable;
 use rustc_middle::query::{
     ActiveKeyStatus, CycleError, CycleErrorHandling, EnsureMode, QueryCache, QueryJob, QueryJobId,
-    QueryLatch, QueryMode, QueryStackDeferred, QueryStackFrame, QueryState,
+    QueryKey, QueryLatch, QueryMode, QueryState,
 };
 use rustc_middle::ty::TyCtxt;
 use rustc_middle::verify_ich::incremental_verify_ich;
@@ -44,17 +45,20 @@ pub(crate) fn all_inactive<'tcx, K>(state: &QueryState<'tcx, K>) -> bool {
 /// Internal plumbing for collecting the set of active jobs for this query.
 ///
 /// Should only be called from `gather_active_jobs`.
-pub(crate) fn gather_active_jobs_inner<'tcx, K: Copy>(
-    state: &QueryState<'tcx, K>,
+pub(crate) fn gather_active_jobs_inner<'tcx, C>(
+    query: &'tcx QueryVTable<'tcx, C>,
     tcx: TyCtxt<'tcx>,
-    make_frame: fn(TyCtxt<'tcx>, K) -> QueryStackFrame<QueryStackDeferred<'tcx>>,
     require_complete: bool,
     job_map_out: &mut QueryJobMap<'tcx>, // Out-param; job info is gathered into this map
-) -> Option<()> {
+) -> Option<()>
+where
+    C: QueryCache<Key: QueryKey + DynSend + DynSync>,
+    QueryVTable<'tcx, C>: DynSync,
+{
     let mut active = Vec::new();
 
     // Helper to gather active jobs from a single shard.
-    let mut gather_shard_jobs = |shard: &HashTable<(K, ActiveKeyStatus<'tcx>)>| {
+    let mut gather_shard_jobs = |shard: &HashTable<(C::Key, ActiveKeyStatus<'tcx>)>| {
         for (k, v) in shard.iter() {
             if let ActiveKeyStatus::Started(ref job) = *v {
                 active.push((*k, job.clone()));
@@ -64,22 +68,33 @@ pub(crate) fn gather_active_jobs_inner<'tcx, K: Copy>(
 
     // Lock shards and gather jobs from each shard.
     if require_complete {
-        for shard in state.active.lock_shards() {
+        for shard in query.state.active.lock_shards() {
             gather_shard_jobs(&shard);
         }
     } else {
         // We use try_lock_shards here since we are called from the
         // deadlock handler, and this shouldn't be locked.
-        for shard in state.active.try_lock_shards() {
-            let shard = shard?;
-            gather_shard_jobs(&shard);
+        for shard in query.state.active.try_lock_shards() {
+            // This can be called during unwinding, and the function has a `try_`-prefix, so
+            // don't `unwrap()` here, just manually check for `None` and do best-effort error
+            // reporting.
+            match shard {
+                None => {
+                    tracing::warn!(
+                        "Failed to collect active jobs for query with name `{}`!",
+                        query.name
+                    );
+                    return None;
+                }
+                Some(shard) => gather_shard_jobs(&shard),
+            }
         }
     }
 
     // Call `make_frame` while we're not holding a `state.active` lock as `make_frame` may call
     // queries leading to a deadlock.
     for (key, job) in active {
-        let frame = make_frame(tcx, key);
+        let frame = crate::plumbing::create_deferred_query_stack_frame(tcx, query, key);
         job_map_out.insert(job.id, QueryJobInfo { frame, job });
     }
 

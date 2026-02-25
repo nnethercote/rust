@@ -303,8 +303,7 @@ pub(crate) fn create_deferred_query_stack_frame<'tcx, C>(
     key: C::Key,
 ) -> QueryStackFrame<QueryStackDeferred<'tcx>>
 where
-    C: QueryCache,
-    C::Key: QueryKey + DynSend + DynSync,
+    C: QueryCache<Key: QueryKey + DynSend + DynSync>,
     QueryVTable<'tcx, C>: DynSync,
 {
     let kind = vtable.dep_kind;
@@ -627,30 +626,12 @@ macro_rules! define_queries {
                 require_complete: bool,
                 job_map_out: &mut QueryJobMap<'tcx>,
             ) -> Option<()> {
-                let make_frame = |tcx: TyCtxt<'tcx>, key| {
-                    let vtable = &tcx.query_system.query_vtables.$name;
-                    $crate::plumbing::create_deferred_query_stack_frame(tcx, vtable, key)
-                };
-
-                // Call `gather_active_jobs_inner` to do the actual work.
-                let res = crate::execution::gather_active_jobs_inner(
-                    &tcx.query_system.query_vtables.$name.state,
+                crate::execution::gather_active_jobs_inner(
+                    &tcx.query_system.query_vtables.$name,
                     tcx,
-                    make_frame,
                     require_complete,
                     job_map_out,
-                );
-
-                // this can be called during unwinding, and the function has a `try_`-prefix, so
-                // don't `unwrap()` here, just manually check for `None` and do best-effort error
-                // reporting.
-                if res.is_none() {
-                    tracing::warn!(
-                        "Failed to collect active jobs for query with name `{}`!",
-                        stringify!($name)
-                    );
-                }
-                res
+                )
             }
 
             pub(crate) fn alloc_self_profile_query_strings<'tcx>(
