@@ -99,16 +99,6 @@ pub(super) fn try_mark_green<'tcx>(tcx: TyCtxt<'tcx>, dep_node: &DepNode) -> boo
     tcx.dep_graph.try_mark_green(tcx, dep_node).is_some()
 }
 
-pub(super) fn encode_all_query_results<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    encoder: &mut CacheEncoder<'_, 'tcx>,
-    query_result_index: &mut EncodedDepNodeIndex,
-) {
-    for encode in super::ENCODE_QUERY_RESULTS.iter().copied().flatten() {
-        encode(tcx, encoder, query_result_index);
-    }
-}
-
 macro_rules! cycle_error_handling {
     ([]) => {{
         rustc_middle::query::CycleErrorHandling::Error
@@ -290,7 +280,7 @@ where
     QueryStackFrame::new(info, kind, def_id, def_id_for_ty_in_cycle)
 }
 
-pub(crate) fn encode_query_results_inner<'a, 'tcx, C, V>(
+pub(crate) fn encode_query_results<'a, 'tcx, C, V>(
     tcx: TyCtxt<'tcx>,
     query: &'tcx QueryVTable<'tcx, C>,
     encoder: &mut CacheEncoder<'a, 'tcx>,
@@ -592,21 +582,6 @@ macro_rules! define_queries {
                     &tcx.query_system.query_vtables.$name
                 }
             }
-
-            item_if_cache_on_disk! { [$($modifiers)*]
-                pub(crate) fn encode_query_results<'tcx>(
-                    tcx: TyCtxt<'tcx>,
-                    encoder: &mut CacheEncoder<'_, 'tcx>,
-                    query_result_index: &mut EncodedDepNodeIndex
-                ) {
-                    $crate::plumbing::encode_query_results_inner(
-                        tcx,
-                        &tcx.query_system.query_vtables.$name,
-                        encoder,
-                        query_result_index,
-                    )
-                }
-            }
         })*}
 
         pub fn make_query_vtables<'tcx>(incremental: bool) -> queries::QueryVTables<'tcx> {
@@ -616,8 +591,6 @@ macro_rules! define_queries {
                 )*
             }
         }
-
-        // These arrays are used for iteration and can't be indexed by `DepKind`.
 
         /// Returns a map of currently active query jobs, collected from all queries.
         ///
@@ -679,21 +652,23 @@ macro_rules! define_queries {
             tcx.sess.prof.store_query_cache_hits();
         }
 
-        const ENCODE_QUERY_RESULTS: &[
-            Option<for<'tcx> fn(
-                TyCtxt<'tcx>,
-                &mut CacheEncoder<'_, 'tcx>,
-                &mut EncodedDepNodeIndex)
-            >
-        ] = &[
+        fn encode_all_query_results<'tcx>(
+            tcx: TyCtxt<'tcx>,
+            encoder: &mut CacheEncoder<'_, 'tcx>,
+            query_result_index: &mut EncodedDepNodeIndex,
+        ) {
             $(
-                if_cache_on_disk!([$($modifiers)*] {
-                    Some(query_impl::$name::encode_query_results)
-                } {
-                    None
-                })
-            ),*
-        ];
+                item_if_cache_on_disk! {
+                    [$($modifiers)*]
+                    $crate::plumbing::encode_query_results(
+                        tcx,
+                        &tcx.query_system.query_vtables.$name,
+                        encoder,
+                        query_result_index,
+                    )
+                }
+            )*
+        }
 
         pub fn query_key_hash_verify_all<'tcx>(tcx: TyCtxt<'tcx>) {
             if tcx.sess.opts.unstable_opts.incremental_verify_ich || cfg!(debug_assertions) {

@@ -19,7 +19,7 @@ use rustc_span::Span;
 
 pub use crate::dep_kind_vtables::make_dep_kind_vtables;
 pub use crate::job::{QueryJobMap, break_query_cycles, print_query_stack};
-use crate::plumbing::{encode_all_query_results, try_mark_green};
+use crate::plumbing::try_mark_green;
 use crate::profiling_support::QueryKeyStringCache;
 use crate::values::Value;
 
