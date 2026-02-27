@@ -1,3 +1,4 @@
+use rustc_middle::arena::Arena;
 use rustc_middle::bug;
 use rustc_middle::dep_graph::{DepKindVTable, DepNodeKey, KeyFingerprintStyle};
 use rustc_middle::query::QueryCache;
@@ -138,24 +139,49 @@ where
     }
 }
 
-/// Helper module containing a [`DepKindVTable`] constructor for each dep kind,
-/// for use with [`rustc_middle::make_dep_kind_array`].
-///
-/// That macro will check that we gave it a constructor for every known dep kind.
-mod _dep_kind_vtable_ctors {
-    // Re-export all of the vtable constructors for non-query and query dep kinds.
+macro_rules! define_vtables {
+    (
+        queries {
+            $(
+                $(#[$attr:meta])*
+                [$($modifiers:tt)*] fn $name:ident($K:ty) -> $V:ty,
+            )*
+        }
+        non_queries {
+            $(
+                $(#[$nq_attr:meta])*
+                $nq_name:ident,
+            )*
+        }
+    ) => {
+        // Create an array of vtables, one for each dep kind (non-query and query).
+        pub fn make_dep_kind_vtables<'tcx>(arena: &'tcx Arena<'tcx>)
+            -> &'tcx [DepKindVTable<'tcx>]
+        {
+            // The small number of non-query vtables: `Null`, `Red`, etc.
+            let nq_vtables = [
+                $(
+                    non_query::$nq_name(),
+                )*
+            ];
 
-    // Non-query vtable constructors are defined in normal code.
-    pub(crate) use super::non_query::*;
-    // Query vtable constructors are defined via a macro.
-    pub(crate) use crate::_dep_kind_vtable_ctors_for_queries::*;
+            // The large number of query vtables.
+            let q_vtables: [DepKindVTable<'tcx>; _] = [
+                $(
+                    $crate::dep_kind_vtables::make_dep_kind_vtable_for_query::<
+                        $crate::query_impl::$name::VTableGetter,
+                    >(
+                        is_anon!([$($modifiers)*]),
+                        is_eval_always!([$($modifiers)*]),
+                    )
+                ),*
+            ];
+
+            // Non-query vtables must come before query vtables, to match the order of `DepKind`.
+            let iter = nq_vtables.into_iter().chain(q_vtables.into_iter());
+            arena.alloc_from_iter(iter)
+        }
+    }
 }
 
-pub fn make_dep_kind_vtables<'tcx>(
-    arena: &'tcx rustc_middle::arena::Arena<'tcx>,
-) -> &'tcx [DepKindVTable<'tcx>] {
-    // Create an array of vtables, one for each dep kind (non-query and query).
-    let dep_kind_vtables: [DepKindVTable<'tcx>; _] =
-        rustc_middle::make_dep_kind_array!(_dep_kind_vtable_ctors);
-    arena.alloc_from_iter(dep_kind_vtables)
-}
+rustc_middle::rustc_with_all_queries! { define_vtables! }
