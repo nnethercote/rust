@@ -486,24 +486,37 @@ pub(super) fn rustc_queries(input: TokenStream) -> TokenStream {
     let HelperTokenStreams { description_fns_stream, cache_on_disk_if_fns_stream } = helpers;
 
     TokenStream::from(quote! {
-        /// Higher-order macro that invokes the specified macro with a prepared
-        /// list of all query signatures (including modifiers).
-        ///
-        /// This allows multiple simpler macros to each have access to the list
-        /// of queries.
+        /// Higher-order macro that invokes the specified macro with (a) a list of all query
+        /// signatures (including modifiers), and (b) a list of non-query names. This allows
+        /// multiple simpler macros to each have access to these lists.
         #[macro_export]
         macro_rules! rustc_with_all_queries {
             (
-                // The macro to invoke once, on all queries (plus extras).
+                // The macro to invoke once, on all queries and non-queries.
                 $macro:ident!
-
-                // Within [], an optional list of extra "query" signatures to
-                // pass to the given macro, in addition to the actual queries.
-                $( [$($extra_fake_queries:tt)*] )?
             ) => {
                 $macro! {
-                    $( $($extra_fake_queries)* )?
-                    #query_stream
+                    queries {
+                        #query_stream
+                    }
+                    // njn: would it be better to parse this from the query list, rather than
+                    // hardwiring them into the proc macro? Slightly more effort, but more
+                    // principled, and gets the non-queries listed in the same place as the
+                    // queries.
+                    non_queries {
+                        /// We use this for most things when incr. comp. is turned off.
+                        Null,
+                        /// We use this to create a forever-red node.
+                        Red,
+                        /// We use this to create a side effect node.
+                        SideEffect,
+                        /// We use this to create the anon node with zero dependencies.
+                        AnonZeroDeps,
+                        TraitSelect,
+                        CompileCodegenUnit,
+                        CompileMonoItem,
+                        Metadata,
+                    }
                 }
             }
         }
