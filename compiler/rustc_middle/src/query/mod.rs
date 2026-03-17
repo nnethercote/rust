@@ -4,7 +4,7 @@ pub use self::caches::{DefIdCache, DefaultCache, QueryCache, SingleCache, VecCac
 pub use self::job::{QueryJob, QueryJobId, QueryLatch, QueryWaiter};
 pub use self::keys::{AsLocalQueryKey, LocalCrate, QueryKey};
 pub use self::plumbing::{
-    ActiveKeyStatus, CycleError, EnsureMode, IntoQueryParam, QueryMode, QueryState, QuerySystem,
+    ActiveKeyStatus, Cycle, EnsureMode, IntoQueryParam, QueryMode, QueryState, QuerySystem,
     QueryVTable, TyCtxtAt, TyCtxtEnsureDone, TyCtxtEnsureOk, TyCtxtEnsureResult,
 };
 pub use self::stack::QueryStackFrame;

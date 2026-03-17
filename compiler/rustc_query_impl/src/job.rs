@@ -6,9 +6,7 @@ use std::sync::Arc;
 use rustc_data_structures::fx::{FxHashMap, FxHashSet};
 use rustc_errors::{Diag, DiagCtxtHandle};
 use rustc_hir::def::DefKind;
-use rustc_middle::query::{
-    CycleError, QueryJob, QueryJobId, QueryLatch, QueryStackFrame, QueryWaiter,
-};
+use rustc_middle::query::{Cycle, QueryJob, QueryJobId, QueryLatch, QueryStackFrame, QueryWaiter};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{DUMMY_SP, Span, respan};
 
@@ -57,29 +55,29 @@ pub(crate) fn find_cycle_in_stack<'tcx>(
     job_map: QueryJobMap<'tcx>,
     current_job: &Option<QueryJobId>,
     span: Span,
-) -> CycleError<'tcx> {
+) -> Cycle<'tcx> {
     // Find the waitee amongst `current_job` parents
-    let mut cycle = Vec::new();
+    let mut stack = Vec::new();
     let mut current_job = Option::clone(current_job);
 
     while let Some(job) = current_job {
         let info = &job_map.map[&job];
-        cycle.push(respan(info.job.span, info.frame.clone()));
+        stack.push(respan(info.job.span, info.frame.clone()));
 
         if job == id {
-            cycle.reverse();
+            stack.reverse();
 
             // This is the end of the cycle
             // The span entry we included was for the usage
             // of the cycle itself, and not part of the cycle
             // Replace it with the span which caused the cycle to form
-            cycle[0].span = span;
+            stack[0].span = span;
             // Find out why the cycle itself was used
             let usage = try {
                 let parent = info.job.parent?;
                 respan(info.job.span, job_map.frame_of(parent).clone())
             };
-            return CycleError { usage, cycle };
+            return Cycle { usage, stack };
         }
 
         current_job = info.job.parent;
@@ -316,9 +314,9 @@ fn remove_cycle<'tcx>(
             .map(|(span, job)| respan(span, job_map.frame_of(job).clone()));
 
         // Create the cycle error
-        let error = CycleError {
+        let error = Cycle {
             usage,
-            cycle: stack
+            stack: stack
                 .iter()
                 .map(|&(span, job)| respan(span, job_map.frame_of(job).clone()))
                 .collect(),
@@ -448,9 +446,9 @@ pub fn print_query_stack<'tcx>(
 
 #[inline(never)]
 #[cold]
-pub(crate) fn report_cycle<'tcx>(
+pub(crate) fn create_cycle_error<'tcx>(
     tcx: TyCtxt<'tcx>,
-    CycleError { usage, cycle: stack }: &CycleError<'tcx>,
+    Cycle { usage, stack }: &Cycle<'tcx>,
 ) -> Diag<'tcx> {
     assert!(!stack.is_empty());
 
