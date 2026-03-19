@@ -397,7 +397,7 @@ macro_rules! define_callbacks {
         /// Holds a `QueryVTable` for each query.
         pub struct QueryVTables<'tcx> {
             $(
-                pub $name: crate::query::QueryVTable<'tcx, $name::Cache<'tcx>>,
+                pub $name: $crate::query::QueryVTable<'tcx, $name::Cache<'tcx>>,
             )*
         }
 
@@ -455,7 +455,7 @@ macro_rules! define_callbacks {
                 match self {
                     $(
                         TaggedQueryKey::$name(key) =>
-                            crate::query::QueryKey::default_span(key, tcx),
+                            $crate::query::QueryKey::default_span(key, tcx),
                     )*
                 }
             }
@@ -463,7 +463,7 @@ macro_rules! define_callbacks {
             pub fn def_kind(&self, tcx: TyCtxt<'tcx>) -> Option<DefKind> {
                 // This is used to reduce code generation as it
                 // can be reused for queries with the same key type.
-                fn inner<'tcx>(key: &impl crate::query::QueryKey, tcx: TyCtxt<'tcx>)
+                fn inner<'tcx>(key: &impl $crate::query::QueryKey, tcx: TyCtxt<'tcx>)
                     -> Option<DefKind>
                 {
                     key
@@ -476,6 +476,7 @@ macro_rules! define_callbacks {
                     // Try to avoid infinite recursion.
                     return None
                 }
+
                 match self {
                     $(
                         TaggedQueryKey::$name(key) => inner(key, tcx),
@@ -574,7 +575,7 @@ macro_rules! define_callbacks {
                 $(#[$attr])*
                 #[inline(always)]
                 pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
-                    crate::query::inner::query_ensure_ok_or_done(
+                    $crate::query::inner::query_ensure_ok_or_done(
                         self.tcx,
                         &self.tcx.query_system.query_vtables.$name,
                         $crate::query::IntoQueryParam::into_query_param(key),
@@ -584,7 +585,7 @@ macro_rules! define_callbacks {
             )*
         }
 
-        // Only defined when the `ensure_result` modifier is present.
+        // Only defined when the `returns_error_guaranteed` modifier is present.
         impl<'tcx> $crate::query::TyCtxtEnsureResult<'tcx> {
             $(
                 #[cfg($returns_error_guaranteed)]
@@ -594,7 +595,7 @@ macro_rules! define_callbacks {
                     self,
                     key: query_helper_param_ty!($($K)*),
                 ) -> Result<(), rustc_errors::ErrorGuaranteed> {
-                    crate::query::inner::query_ensure_result(
+                    $crate::query::inner::query_ensure_result(
                         self.tcx,
                         &self.tcx.query_system.query_vtables.$name,
                         $crate::query::IntoQueryParam::into_query_param(key),
@@ -608,7 +609,7 @@ macro_rules! define_callbacks {
                 $(#[$attr])*
                 #[inline(always)]
                 pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
-                    crate::query::inner::query_ensure_ok_or_done(
+                    $crate::query::inner::query_ensure_ok_or_done(
                         self.tcx,
                         &self.tcx.query_system.query_vtables.$name,
                         $crate::query::IntoQueryParam::into_query_param(key),
@@ -619,6 +620,7 @@ macro_rules! define_callbacks {
         }
 
         $(
+            // Only defined when the `feedable` modifier is present.
             #[cfg($feedable)]
             impl<'tcx, K: $crate::query::IntoQueryParam<$name::Key<'tcx>> + Copy>
                 TyCtxtFeed<'tcx, K>
@@ -626,13 +628,11 @@ macro_rules! define_callbacks {
                 $(#[$attr])*
                 #[inline(always)]
                 pub fn $name(self, value: $name::ProvidedValue<'tcx>) {
-                    let key = self.key().into_query_param();
-                    let erased_value = $name::provided_to_erased(self.tcx, value);
                     $crate::query::inner::query_feed(
                         self.tcx,
                         &self.tcx.query_system.query_vtables.$name,
-                        key,
-                        erased_value,
+                        self.key().into_query_param(),
+                        $name::provided_to_erased(self.tcx, value),
                     );
                 }
             }
