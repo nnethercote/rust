@@ -205,6 +205,13 @@ pub struct TyCtxtEnsureDone<'tcx> {
 }
 
 impl<'tcx> TyCtxt<'tcx> {
+    /// Returns a transparent wrapper for `TyCtxt` which uses
+    /// `span` as the location of queries performed through it.
+    #[inline(always)]
+    pub fn at(self, span: Span) -> TyCtxtAt<'tcx> {
+        TyCtxtAt { tcx: self, span }
+    }
+
     /// FIXME: `ensure_ok`'s effects are subtle. Is this comment fully accurate?
     ///
     /// Wrapper that calls queries in a special "ensure OK" mode, for callers
@@ -261,13 +268,6 @@ impl<'tcx> TyCtxt<'tcx> {
     #[inline(always)]
     pub fn ensure_done(self) -> TyCtxtEnsureDone<'tcx> {
         TyCtxtEnsureDone { tcx: self }
-    }
-
-    /// Returns a transparent wrapper for `TyCtxt` which uses
-    /// `span` as the location of queries performed through it.
-    #[inline(always)]
-    pub fn at(self, span: Span) -> TyCtxtAt<'tcx> {
-        TyCtxtAt { tcx: self, span }
     }
 }
 
@@ -327,6 +327,9 @@ macro_rules! define_callbacks {
                 #[cfg(not($arena_cache))]
                 pub type ProvidedValue<'tcx> = Value<'tcx>;
 
+                pub type Cache<'tcx> =
+                    <Key<'tcx> as $crate::query::QueryKey>::Cache<Erased<Value<'tcx>>>;
+
                 /// This helper function takes a value returned by the query provider
                 /// (or loaded from disk, or supplied by query feeding), allocates
                 /// it in an arena if requested by the `arena_cache` modifier, and
@@ -357,9 +360,6 @@ macro_rules! define_callbacks {
 
                     erase::erase_val(value)
                 }
-
-                pub type Cache<'tcx> =
-                    <Key<'tcx> as $crate::query::QueryKey>::Cache<Erased<Value<'tcx>>>;
 
                 // Ensure that keys grow no larger than 88 bytes by accident.
                 // Increase this limit if necessary, but do try to keep the size low if possible
@@ -394,6 +394,13 @@ macro_rules! define_callbacks {
             }
         )*
 
+        /// Holds a `QueryVTable` for each query.
+        pub struct QueryVTables<'tcx> {
+            $(
+                pub $name: crate::query::QueryVTable<'tcx, $name::Cache<'tcx>>,
+            )*
+        }
+
         /// Holds per-query arenas for queries with the `arena_cache` modifier.
         #[derive(Default)]
         pub struct QueryArenas<'tcx> {
@@ -406,104 +413,8 @@ macro_rules! define_callbacks {
             )*
         }
 
-        impl<'tcx> $crate::query::TyCtxtEnsureOk<'tcx> {
-            $(
-                $(#[$attr])*
-                #[inline(always)]
-                pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
-                    crate::query::inner::query_ensure_ok_or_done(
-                        self.tcx,
-                        &self.tcx.query_system.query_vtables.$name,
-                        $crate::query::IntoQueryParam::into_query_param(key),
-                        $crate::query::EnsureMode::Ok,
-                    )
-                }
-            )*
-        }
-
-        // Only defined when the `ensure_result` modifier is present.
-        impl<'tcx> $crate::query::TyCtxtEnsureResult<'tcx> {
-            $(
-                #[cfg($returns_error_guaranteed)]
-                $(#[$attr])*
-                #[inline(always)]
-                pub fn $name(
-                    self,
-                    key: query_helper_param_ty!($($K)*),
-                ) -> Result<(), rustc_errors::ErrorGuaranteed> {
-                    crate::query::inner::query_ensure_result(
-                        self.tcx,
-                        &self.tcx.query_system.query_vtables.$name,
-                        $crate::query::IntoQueryParam::into_query_param(key),
-                    )
-                }
-            )*
-        }
-
-        impl<'tcx> $crate::query::TyCtxtEnsureDone<'tcx> {
-            $(
-                $(#[$attr])*
-                #[inline(always)]
-                pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
-                    crate::query::inner::query_ensure_ok_or_done(
-                        self.tcx,
-                        &self.tcx.query_system.query_vtables.$name,
-                        $crate::query::IntoQueryParam::into_query_param(key),
-                        $crate::query::EnsureMode::Done,
-                    );
-                }
-            )*
-        }
-
-        impl<'tcx> TyCtxt<'tcx> {
-            $(
-                $(#[$attr])*
-                #[inline(always)]
-                #[must_use]
-                pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V {
-                    self.at(DUMMY_SP).$name(key)
-                }
-            )*
-        }
-
-        impl<'tcx> $crate::query::TyCtxtAt<'tcx> {
-            $(
-                $(#[$attr])*
-                #[inline(always)]
-                pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V {
-                    use $crate::query::{erase, inner};
-
-                    erase::restore_val::<$V>(inner::query_get_at(
-                        self.tcx,
-                        self.span,
-                        &self.tcx.query_system.query_vtables.$name,
-                        $crate::query::IntoQueryParam::into_query_param(key),
-                    ))
-                }
-            )*
-        }
-
-        $(
-            #[cfg($feedable)]
-            impl<'tcx, K: $crate::query::IntoQueryParam<$name::Key<'tcx>> + Copy>
-                TyCtxtFeed<'tcx, K>
-            {
-                $(#[$attr])*
-                #[inline(always)]
-                pub fn $name(self, value: $name::ProvidedValue<'tcx>) {
-                    let key = self.key().into_query_param();
-                    let erased_value = $name::provided_to_erased(self.tcx, value);
-                    $crate::query::inner::query_feed(
-                        self.tcx,
-                        &self.tcx.query_system.query_vtables.$name,
-                        key,
-                        erased_value,
-                    );
-                }
-            }
-        )*
-
-        /// Identifies a query by kind and key. This is in contrast to `QueryJobId` which is just a number.
+        /// Identifies a query by kind and key. This is in contrast to `QueryJobId` which is just a
+        /// number.
         #[allow(non_camel_case_types)]
         #[derive(Clone, Debug)]
         pub enum TaggedQueryKey<'tcx> {
@@ -520,7 +431,8 @@ macro_rules! define_callbacks {
             pub fn description(&self, tcx: TyCtxt<'tcx>) -> String {
                 let (name, description) = ty::print::with_no_queries!(match self {
                     $(
-                        TaggedQueryKey::$name(key) => (stringify!($name), _description_fns::$name(tcx, *key)),
+                        TaggedQueryKey::$name(key) =>
+                            (stringify!($name), _description_fns::$name(tcx, *key)),
                     )*
                 });
                 if tcx.sess.verbose_internals() {
@@ -542,7 +454,8 @@ macro_rules! define_callbacks {
                 }
                 match self {
                     $(
-                        TaggedQueryKey::$name(key) => crate::query::QueryKey::default_span(key, tcx),
+                        TaggedQueryKey::$name(key) =>
+                            crate::query::QueryKey::default_span(key, tcx),
                     )*
                 }
             }
@@ -550,8 +463,13 @@ macro_rules! define_callbacks {
             pub fn def_kind(&self, tcx: TyCtxt<'tcx>) -> Option<DefKind> {
                 // This is used to reduce code generation as it
                 // can be reused for queries with the same key type.
-                fn inner<'tcx>(key: &impl crate::query::QueryKey, tcx: TyCtxt<'tcx>) -> Option<DefKind> {
-                    key.key_as_def_id().and_then(|def_id| def_id.as_local()).map(|def_id| tcx.def_kind(def_id))
+                fn inner<'tcx>(key: &impl crate::query::QueryKey, tcx: TyCtxt<'tcx>)
+                    -> Option<DefKind>
+                {
+                    key
+                        .key_as_def_id()
+                        .and_then(|def_id| def_id.as_local())
+                        .map(|def_id| tcx.def_kind(def_id))
                 }
 
                 if let TaggedQueryKey::def_kind(..) = self {
@@ -564,13 +482,6 @@ macro_rules! define_callbacks {
                     )*
                 }
             }
-        }
-
-        /// Holds a `QueryVTable` for each query.
-        pub struct QueryVTables<'tcx> {
-            $(
-                pub $name: crate::query::QueryVTable<'tcx, $name::Cache<'tcx>>,
-            )*
         }
 
         pub struct Providers {
@@ -629,6 +540,103 @@ macro_rules! define_callbacks {
         impl Clone for ExternProviders {
             fn clone(&self) -> Self { *self }
         }
+
+        impl<'tcx> TyCtxt<'tcx> {
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                #[must_use]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V {
+                    self.at(DUMMY_SP).$name(key)
+                }
+            )*
+        }
+
+        impl<'tcx> $crate::query::TyCtxtAt<'tcx> {
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) -> $V {
+                    use $crate::query::{erase, inner};
+
+                    erase::restore_val::<$V>(inner::query_get_at(
+                        self.tcx,
+                        self.span,
+                        &self.tcx.query_system.query_vtables.$name,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                    ))
+                }
+            )*
+        }
+
+        impl<'tcx> $crate::query::TyCtxtEnsureOk<'tcx> {
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
+                    crate::query::inner::query_ensure_ok_or_done(
+                        self.tcx,
+                        &self.tcx.query_system.query_vtables.$name,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                        $crate::query::EnsureMode::Ok,
+                    )
+                }
+            )*
+        }
+
+        // Only defined when the `ensure_result` modifier is present.
+        impl<'tcx> $crate::query::TyCtxtEnsureResult<'tcx> {
+            $(
+                #[cfg($returns_error_guaranteed)]
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(
+                    self,
+                    key: query_helper_param_ty!($($K)*),
+                ) -> Result<(), rustc_errors::ErrorGuaranteed> {
+                    crate::query::inner::query_ensure_result(
+                        self.tcx,
+                        &self.tcx.query_system.query_vtables.$name,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                    )
+                }
+            )*
+        }
+
+        impl<'tcx> $crate::query::TyCtxtEnsureDone<'tcx> {
+            $(
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, key: query_helper_param_ty!($($K)*)) {
+                    crate::query::inner::query_ensure_ok_or_done(
+                        self.tcx,
+                        &self.tcx.query_system.query_vtables.$name,
+                        $crate::query::IntoQueryParam::into_query_param(key),
+                        $crate::query::EnsureMode::Done,
+                    );
+                }
+            )*
+        }
+
+        $(
+            #[cfg($feedable)]
+            impl<'tcx, K: $crate::query::IntoQueryParam<$name::Key<'tcx>> + Copy>
+                TyCtxtFeed<'tcx, K>
+            {
+                $(#[$attr])*
+                #[inline(always)]
+                pub fn $name(self, value: $name::ProvidedValue<'tcx>) {
+                    let key = self.key().into_query_param();
+                    let erased_value = $name::provided_to_erased(self.tcx, value);
+                    $crate::query::inner::query_feed(
+                        self.tcx,
+                        &self.tcx.query_system.query_vtables.$name,
+                        key,
+                        erased_value,
+                    );
+                }
+            }
+        )*
     };
 }
 
