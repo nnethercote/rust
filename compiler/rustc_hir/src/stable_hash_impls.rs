@@ -3,10 +3,10 @@ use rustc_span::HashStableContext;
 use rustc_span::def_id::DefPathHash;
 
 use crate::HashIgnoredAttrId;
+use crate::def_id::ItemLocalId;
 use crate::hir::{
     AttributeMap, BodyId, ForeignItemId, ImplItemId, ItemId, OwnerNodes, TraitItemId,
 };
-use crate::hir_id::ItemLocalId;
 use crate::lints::DelayedLints;
 
 impl<Hcx: HashStableContext> ToStableHashKey<Hcx> for BodyId {
