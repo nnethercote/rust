@@ -11,7 +11,6 @@ use crate::ty::{self, GenericArg, Ty, TyCtxt};
 // `pretty` is a separate module only for organization.
 mod pretty;
 pub use self::pretty::*;
-use super::Lift;
 
 pub type PrintError = std::fmt::Error;
 
@@ -411,14 +410,14 @@ impl<'tcx, P: Printer<'tcx>> Print<'tcx, P> for ty::Const<'tcx> {
     }
 }
 
-impl<T> rustc_type_ir::ir_print::IrPrint<T> for TyCtxt<'_>
+impl<'a, 'tcx, T> rustc_type_ir::ir_print::IrPrint<T> for TyCtxt<'tcx>
 where
-    T: Copy + for<'a, 'tcx> Lift<TyCtxt<'tcx>, Lifted: Print<'tcx, FmtPrinter<'a, 'tcx>>>,
+    T: Copy + Print<'tcx, FmtPrinter<'a, 'tcx>>,
 {
     fn print(t: &T, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         ty::tls::with(|tcx| {
             let mut p = FmtPrinter::new(tcx, Namespace::TypeNS);
-            tcx.lift(*t).expect("could not lift for printing").print(&mut p)?;
+            t.print(&mut p)?;
             fmt.write_str(&p.into_buffer())?;
             Ok(())
         })

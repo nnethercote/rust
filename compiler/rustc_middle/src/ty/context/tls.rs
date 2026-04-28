@@ -60,9 +60,9 @@ where
 /// Allows access to the current `ImplicitCtxt` in a closure if one is available.
 #[inline]
 #[track_caller]
-pub fn with_context_opt<F, R>(f: F) -> R
+pub fn with_context_opt<'a, 'tcx: 'a, F, R>(f: F) -> R
 where
-    F: for<'a, 'tcx> FnOnce(Option<&ImplicitCtxt<'a, 'tcx>>) -> R,
+    F: FnOnce(Option<&ImplicitCtxt<'a, 'tcx>>) -> R,
 {
     let context = TLV.get();
     if context.is_null() {
@@ -79,9 +79,9 @@ where
 /// Allows access to the current `ImplicitCtxt`.
 /// Panics if there is no `ImplicitCtxt` available.
 #[inline]
-pub fn with_context<F, R>(f: F) -> R
+pub fn with_context<'a, 'tcx: 'a, F, R>(f: F) -> R
 where
-    F: for<'a, 'tcx> FnOnce(&ImplicitCtxt<'a, 'tcx>) -> R,
+    F: FnOnce(&ImplicitCtxt<'a, 'tcx>) -> R,
 {
     with_context_opt(|opt_context| f(opt_context.expect("no ImplicitCtxt stored in tls")))
 }
@@ -89,9 +89,9 @@ where
 /// Allows access to the `TyCtxt` in the current `ImplicitCtxt`.
 /// Panics if there is no `ImplicitCtxt` available.
 #[inline]
-pub fn with<F, R>(f: F) -> R
+pub fn with<'tcx, F, R>(f: F) -> R
 where
-    F: for<'tcx> FnOnce(TyCtxt<'tcx>) -> R,
+    F: FnOnce(TyCtxt<'tcx>) -> R,
 {
     with_context(|context| f(context.tcx))
 }
@@ -100,9 +100,9 @@ where
 /// The closure is passed None if there is no `ImplicitCtxt` available.
 #[inline]
 #[track_caller]
-pub fn with_opt<F, R>(f: F) -> R
+pub fn with_opt<'tcx, F, R>(f: F) -> R
 where
-    F: for<'tcx> FnOnce(Option<TyCtxt<'tcx>>) -> R,
+    F: FnOnce(Option<TyCtxt<'tcx>>) -> R,
 {
     with_context_opt(
         #[track_caller]

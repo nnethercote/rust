@@ -493,7 +493,6 @@ impl<'tcx> Display for Const<'tcx> {
             // FIXME(valtrees): Correctly print mir constants.
             Const::Unevaluated(c, _ty) => {
                 ty::tls::with(move |tcx| {
-                    let c = tcx.lift(c).unwrap();
                     // Matches `GlobalId` printing.
                     let instance =
                         with_no_trimmed_paths!(tcx.def_path_str_with_args(c.def, c.args));

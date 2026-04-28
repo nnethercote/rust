@@ -1165,7 +1165,6 @@ impl<'tcx> Debug for Rvalue<'tcx> {
                     AggregateKind::Adt(adt_did, variant, args, _user_ty, _) => {
                         ty::tls::with(|tcx| {
                             let variant_def = &tcx.adt_def(adt_did).variant(variant);
-                            let args = tcx.lift(args).expect("could not lift for printing");
                             let name = FmtPrinter::print_string(tcx, Namespace::ValueNS, |p| {
                                 p.print_def_path(variant_def.def_id, args)
                             })?;
@@ -1187,7 +1186,6 @@ impl<'tcx> Debug for Rvalue<'tcx> {
                     AggregateKind::Closure(def_id, args)
                     | AggregateKind::CoroutineClosure(def_id, args) => ty::tls::with(|tcx| {
                         let name = if tcx.sess.opts.unstable_opts.span_free_formats {
-                            let args = tcx.lift(args).unwrap();
                             format!("{{closure@{}}}", tcx.def_path_str_with_args(def_id, args),)
                         } else {
                             let span = tcx.def_span(def_id);
@@ -1995,11 +1993,7 @@ pub(crate) fn pretty_print_const_value<'tcx>(
     ty: Ty<'tcx>,
     fmt: &mut Formatter<'_>,
 ) -> fmt::Result {
-    ty::tls::with(|tcx| {
-        let ct = tcx.lift(ct).unwrap();
-        let ty = tcx.lift(ty).unwrap();
-        pretty_print_const_value_tcx(tcx, ct, ty, fmt)
-    })
+    ty::tls::with(|tcx| pretty_print_const_value_tcx(tcx, ct, ty, fmt))
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -2082,10 +2082,9 @@ pub(crate) fn pretty_print_const<'tcx>(
     print_types: bool,
 ) -> fmt::Result {
     ty::tls::with(|tcx| {
-        let literal = tcx.lift(c).unwrap();
         let mut p = FmtPrinter::new(tcx, Namespace::ValueNS);
         p.print_alloc_ids = true;
-        p.pretty_print_const(literal, print_types)?;
+        p.pretty_print_const(c, print_types)?;
         fmt.write_str(&p.into_buffer())?;
         Ok(())
     })
@@ -3097,9 +3096,7 @@ macro_rules! forward_display_to_print {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 ty::tls::with(|tcx| {
                     let mut p = FmtPrinter::new(tcx, Namespace::TypeNS);
-                    tcx.lift(*self)
-                        .expect("could not lift for printing")
-                        .print(&mut p)?;
+                    self.print(&mut p)?;
                     f.write_str(&p.into_buffer())?;
                     Ok(())
                 })
