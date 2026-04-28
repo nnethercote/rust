@@ -26,7 +26,6 @@ pub mod fast_reject;
 pub mod inherent;
 pub mod ir_print;
 pub mod lang_items;
-pub mod lift;
 pub mod outlives;
 pub mod relate;
 pub mod search_graph;

@@ -5,9 +5,7 @@ use std::hash::Hash;
 use derive_where::derive_where;
 #[cfg(feature = "nightly")]
 use rustc_macros::{Decodable_NoContext, Encodable_NoContext, HashStable_NoContext};
-use rustc_type_ir_macros::{
-    GenericTypeVisitable, Lift_Generic, TypeFoldable_Generic, TypeVisitable_Generic,
-};
+use rustc_type_ir_macros::{GenericTypeVisitable, TypeFoldable_Generic, TypeVisitable_Generic};
 
 use crate::lang_items::SolverTraitLangItem;
 use crate::search_graph::PathKind;
@@ -35,7 +33,7 @@ pub struct NoSolution;
 /// we're currently typechecking while the `predicate` is some trait bound.
 #[derive_where(Clone, Hash, PartialEq, Debug; I: Interner, P)]
 #[derive_where(Copy; I: Interner, P: Copy)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)

@@ -4,12 +4,9 @@ use std::{fmt, iter};
 use derive_where::derive_where;
 #[cfg(feature = "nightly")]
 use rustc_macros::{Decodable_NoContext, Encodable_NoContext, HashStable_NoContext};
-use rustc_type_ir_macros::{
-    GenericTypeVisitable, Lift_Generic, TypeFoldable_Generic, TypeVisitable_Generic,
-};
+use rustc_type_ir_macros::{GenericTypeVisitable, TypeFoldable_Generic, TypeVisitable_Generic};
 
 use crate::inherent::*;
-use crate::lift::Lift;
 use crate::upcast::{Upcast, UpcastFrom};
 use crate::visit::TypeVisitableExt as _;
 use crate::{self as ty, AliasTyKind, Interner};
@@ -26,26 +23,12 @@ pub struct OutlivesPredicate<I: Interner, A>(pub A, pub I::Region);
 
 impl<I: Interner, A: Eq> Eq for OutlivesPredicate<I, A> {}
 
-// FIXME: We manually derive `Lift` because the `derive(Lift_Generic)` doesn't
-// understand how to turn `A` to `A::Lifted` in the output `type Lifted`.
-impl<I: Interner, U: Interner, A> Lift<U> for OutlivesPredicate<I, A>
-where
-    A: Lift<U>,
-    I::Region: Lift<U, Lifted = U::Region>,
-{
-    type Lifted = OutlivesPredicate<U, A::Lifted>;
-
-    fn lift_to_interner(self, cx: U) -> Option<Self::Lifted> {
-        Some(OutlivesPredicate(self.0.lift_to_interner(cx)?, self.1.lift_to_interner(cx)?))
-    }
-}
-
 /// `'a == 'b`.
 /// For the rationale behind having this instead of a pair of bidirectional
 /// `'a: 'b` and `'b: 'a`, see
 /// [this discusstion on Zulip](https://rust-lang.zulipchat.com/#narrow/channel/364551-t-types.2Ftrait-system-refactor/topic/A.20question.20on.20.23251/near/584167074).
 #[derive_where(Clone, Copy, Hash, PartialEq, Eq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -60,7 +43,7 @@ impl<I: Interner> RegionEqPredicate<I> {
 }
 
 #[derive_where(Clone, Copy, Hash, PartialEq, Eq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -120,7 +103,7 @@ impl<I: Interner> RegionConstraint<I> {
 /// Trait references also appear in object types like `Foo<U>`, but in
 /// that case the `Self` parameter is absent from the generic parameters.
 #[derive_where(Clone, Copy, Hash, PartialEq; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -197,7 +180,7 @@ impl<I: Interner> ty::Binder<I, TraitRef<I>> {
 }
 
 #[derive_where(Clone, Copy, Hash, PartialEq; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -344,7 +327,7 @@ impl fmt::Display for PredicatePolarity {
 }
 
 #[derive_where(Clone, Copy, Hash, PartialEq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -403,7 +386,7 @@ impl<I: Interner> ty::Binder<I, ExistentialPredicate<I>> {
 /// The generic parameters don't include the erased `Self`, only trait
 /// type and lifetime parameters (`[X, Y]` and `['a, 'b]` above).
 #[derive_where(Clone, Copy, Hash, PartialEq; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -472,7 +455,7 @@ impl<I: Interner> ty::Binder<I, ExistentialTraitRef<I>> {
 
 /// A `ProjectionPredicate` for an `ExistentialTraitRef`.
 #[derive_where(Clone, Copy, Hash, PartialEq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -561,7 +544,6 @@ impl<I: Interner> ty::Binder<I, ExistentialProjection<I>> {
 }
 
 #[derive_where(Clone, Copy, PartialEq, Eq, Hash, Debug; I: Interner)]
-#[derive(Lift_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Encodable_NoContext, Decodable_NoContext, HashStable_NoContext)
@@ -668,7 +650,7 @@ impl<I: Interner> From<ty::AliasTyKind<I>> for AliasTermKind<I> {
 /// * For an inherent projection, this would be `Ty::N<...>`.
 /// * For an opaque type, there is no explicit syntax.
 #[derive_where(Clone, Copy, Hash, PartialEq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -880,7 +862,7 @@ impl<I: Interner> From<ty::AliasTy<I>> for AliasTerm<I> {
 /// Form #2 eventually yields one of these `ProjectionPredicate`
 /// instances to normalize the LHS.
 #[derive_where(Clone, Copy, Hash, PartialEq; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -943,7 +925,7 @@ impl<I: Interner> fmt::Debug for ProjectionPredicate<I> {
 /// Used by the new solver to normalize an alias. This always expects the `term` to
 /// be an unconstrained inference variable which is used as the output.
 #[derive_where(Clone, Copy, Hash, PartialEq; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -980,7 +962,7 @@ impl<I: Interner> fmt::Debug for NormalizesTo<I> {
 }
 
 #[derive_where(Clone, Copy, Hash, PartialEq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Encodable_NoContext, Decodable_NoContext, HashStable_NoContext)
@@ -1026,7 +1008,7 @@ impl<I: Interner> ty::Binder<I, HostEffectPredicate<I>> {
 /// whether the `a` type is the type that we should label as "expected" when
 /// presenting user diagnostics.
 #[derive_where(Clone, Copy, Hash, PartialEq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)
@@ -1041,7 +1023,7 @@ impl<I: Interner> Eq for SubtypePredicate<I> {}
 
 /// Encodes that we have to coerce *from* the `a` type to the `b` type.
 #[derive_where(Clone, Copy, Hash, PartialEq, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 #[cfg_attr(
     feature = "nightly",
     derive(Decodable_NoContext, Encodable_NoContext, HashStable_NoContext)

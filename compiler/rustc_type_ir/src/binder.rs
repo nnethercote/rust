@@ -6,15 +6,12 @@ use std::ops::{ControlFlow, Deref};
 use derive_where::derive_where;
 #[cfg(feature = "nightly")]
 use rustc_macros::{Decodable_NoContext, Encodable_NoContext, HashStable_NoContext};
-use rustc_type_ir_macros::{
-    GenericTypeVisitable, Lift_Generic, TypeFoldable_Generic, TypeVisitable_Generic,
-};
+use rustc_type_ir_macros::{GenericTypeVisitable, TypeFoldable_Generic, TypeVisitable_Generic};
 use tracing::instrument;
 
 use crate::data_structures::SsoHashSet;
 use crate::fold::{FallibleTypeFolder, TypeFoldable, TypeFolder, TypeSuperFoldable};
 use crate::inherent::*;
-use crate::lift::Lift;
 use crate::visit::{Flags, TypeSuperVisitable, TypeVisitable, TypeVisitableExt, TypeVisitor};
 use crate::{self as ty, DebruijnIndex, Interner, UniverseIndex, Unnormalized};
 
@@ -35,23 +32,6 @@ pub struct Binder<I: Interner, T> {
 }
 
 impl<I: Interner, T: Eq> Eq for Binder<I, T> {}
-
-// FIXME: We manually derive `Lift` because the `derive(Lift_Generic)` doesn't
-// understand how to turn `T` to `T::Lifted` in the output `type Lifted`.
-impl<I: Interner, U: Interner, T> Lift<U> for Binder<I, T>
-where
-    T: Lift<U>,
-    I::BoundVarKinds: Lift<U, Lifted = U::BoundVarKinds>,
-{
-    type Lifted = Binder<U, T::Lifted>;
-
-    fn lift_to_interner(self, cx: U) -> Option<Self::Lifted> {
-        Some(Binder {
-            value: self.value.lift_to_interner(cx)?,
-            bound_vars: self.bound_vars.lift_to_interner(cx)?,
-        })
-    }
-}
 
 #[cfg(feature = "nightly")]
 macro_rules! impl_binder_encode_decode {
@@ -988,23 +968,8 @@ impl<I: Interner, T: fmt::Debug> fmt::Debug for ty::Placeholder<I, T> {
     }
 }
 
-impl<I: Interner, U: Interner, T> Lift<U> for Placeholder<I, T>
-where
-    T: Lift<U>,
-{
-    type Lifted = Placeholder<U, T::Lifted>;
-
-    fn lift_to_interner(self, cx: U) -> Option<Self::Lifted> {
-        Some(Placeholder {
-            universe: self.universe,
-            bound: self.bound.lift_to_interner(cx)?,
-            _tcx: PhantomData,
-        })
-    }
-}
-
 #[derive_where(Clone, Copy, PartialEq, Eq, Hash; I: Interner)]
-#[derive(Lift_Generic, GenericTypeVisitable)]
+#[derive(GenericTypeVisitable)]
 #[cfg_attr(
     feature = "nightly",
     derive(Encodable_NoContext, Decodable_NoContext, HashStable_NoContext)
@@ -1067,7 +1032,7 @@ impl<I: Interner> BoundRegionKind<I> {
 }
 
 #[derive_where(Clone, Copy, PartialEq, Eq, Debug, Hash; I: Interner)]
-#[derive(Lift_Generic, GenericTypeVisitable)]
+#[derive(GenericTypeVisitable)]
 #[cfg_attr(
     feature = "nightly",
     derive(Encodable_NoContext, Decodable_NoContext, HashStable_NoContext)
@@ -1078,7 +1043,7 @@ pub enum BoundTyKind<I: Interner> {
 }
 
 #[derive_where(Clone, Copy, PartialEq, Eq, Debug, Hash; I: Interner)]
-#[derive(Lift_Generic, GenericTypeVisitable)]
+#[derive(GenericTypeVisitable)]
 #[cfg_attr(
     feature = "nightly",
     derive(Encodable_NoContext, Decodable_NoContext, HashStable_NoContext)
@@ -1182,17 +1147,6 @@ impl<I: Interner> PlaceholderRegion<I> {
 pub struct BoundTy<I: Interner> {
     pub var: ty::BoundVar,
     pub kind: BoundTyKind<I>,
-}
-
-impl<I: Interner, U: Interner> Lift<U> for BoundTy<I>
-where
-    BoundTyKind<I>: Lift<U, Lifted = BoundTyKind<U>>,
-{
-    type Lifted = BoundTy<U>;
-
-    fn lift_to_interner(self, cx: U) -> Option<Self::Lifted> {
-        Some(BoundTy { var: self.var, kind: self.kind.lift_to_interner(cx)? })
-    }
 }
 
 impl<I: Interner> fmt::Debug for ty::BoundTy<I> {

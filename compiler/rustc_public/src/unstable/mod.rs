@@ -26,8 +26,6 @@ mod internal_cx;
 pub trait InternalCx<'tcx>: Copy + Clone {
     fn tcx(self) -> TyCtxt<'tcx>;
 
-    fn lift<T: ty::Lift<TyCtxt<'tcx>>>(self, value: T) -> Option<T::Lifted>;
-
     fn mk_args_from_iter<I, T>(self, iter: I) -> T::Output
     where
         I: Iterator<Item = T>,

@@ -1,4 +1,4 @@
-//! This module contains implementations of the `Lift`, `TypeFoldable` and
+//! This module contains implementations of the `Debug`, `TypeFoldable` and
 //! `TypeVisitable` traits for various types in the Rust compiler. Most are
 //! written by hand, though we've recently added some macros and proc-macros
 //! to help with the tedium.
@@ -15,8 +15,8 @@ use super::{GenericArg, GenericArgKind, Pattern, Region};
 use crate::mir::PlaceElem;
 use crate::ty::print::{FmtPrinter, Printer, with_no_trimmed_paths};
 use crate::ty::{
-    self, FallibleTypeFolder, Lift, Term, TermKind, Ty, TyCtxt, TypeFoldable, TypeSuperFoldable,
-    TypeSuperVisitable, TypeVisitable, TypeVisitor,
+    self, FallibleTypeFolder, Ty, TyCtxt, TypeFoldable, TypeSuperFoldable, TypeSuperVisitable,
+    TypeVisitable, TypeVisitor,
 };
 
 impl fmt::Debug for ty::TraitDef {
@@ -181,28 +181,6 @@ impl<'tcx> fmt::Debug for Region<'tcx> {
 // For things that don't carry any arena-allocated data (and are
 // copy...), just add them to one of these lists as appropriate.
 
-// For things for which the type library provides traversal implementations
-// for all Interners, we only need to provide a Lift implementation.
-TrivialLiftImpls! {
-    (),
-    bool,
-    usize,
-    u64,
-    // tidy-alphabetical-start
-    crate::mir::Promoted,
-    crate::mir::interpret::AllocId,
-    crate::mir::interpret::Scalar,
-    crate::ty::ParamConst,
-    rustc_abi::ExternAbi,
-    rustc_abi::Size,
-    rustc_hir::Safety,
-    rustc_middle::mir::ConstValue,
-    rustc_type_ir::BoundConstness,
-    rustc_type_ir::FnSigKind,
-    rustc_type_ir::PredicatePolarity,
-    // tidy-alphabetical-end
-}
-
 // For some things about which the type library does not know, or does not
 // provide any traversal implementations, we need to provide a traversal
 // implementation (only for TyCtxt<'_> interners).
@@ -222,6 +200,7 @@ TrivialTypeTraversalImpls! {
     crate::mir::Promoted,
     crate::mir::RawPtrKind,
     crate::mir::RetagKind,
+    crate::mir::RuntimeChecks,
     crate::mir::SourceInfo,
     crate::mir::SourceScope,
     crate::mir::SourceScopeLocalData,
@@ -233,11 +212,13 @@ TrivialTypeTraversalImpls! {
     crate::ty::AssocKind,
     crate::ty::BoundRegion<'tcx>,
     crate::ty::BoundTy<'tcx>,
+    crate::ty::ParamTy,
     crate::ty::ScalarInt,
     crate::ty::UserTypeAnnotationIndex,
     crate::ty::abstract_const::NotConstEvaluatable,
     crate::ty::adjustment::AutoBorrowMutability,
     crate::ty::adjustment::PointerCoercion,
+    crate::ty::instance::ReifyReason,
     rustc_abi::FieldIdx,
     rustc_abi::VariantIdx,
     rustc_ast::InlineAsmOptions,
@@ -246,48 +227,13 @@ TrivialTypeTraversalImpls! {
     rustc_hir::HirId,
     rustc_hir::MatchSource,
     rustc_hir::RangeEnd,
+    rustc_hir::def_id::DefId,
     rustc_hir::def_id::LocalDefId,
     rustc_span::Ident,
     rustc_span::Span,
     rustc_span::Symbol,
     rustc_target::asm::InlineAsmRegOrRegClass,
     // tidy-alphabetical-end
-}
-
-// For some things about which the type library does not know, or does not
-// provide any traversal implementations, we need to provide a traversal
-// implementation and a lift implementation (the former only for TyCtxt<'_>
-// interners).
-TrivialTypeTraversalAndLiftImpls! {
-    // tidy-alphabetical-start
-    crate::mir::RuntimeChecks,
-    crate::ty::ParamTy,
-    crate::ty::instance::ReifyReason,
-    rustc_hir::def_id::DefId,
-    // tidy-alphabetical-end
-}
-
-///////////////////////////////////////////////////////////////////////////
-// Lift implementations
-
-impl<'tcx, T: Lift<TyCtxt<'tcx>>> Lift<TyCtxt<'tcx>> for Option<T> {
-    type Lifted = Option<T::Lifted>;
-    fn lift_to_interner(self, tcx: TyCtxt<'tcx>) -> Option<Self::Lifted> {
-        Some(match self {
-            Some(x) => Some(tcx.lift(x)?),
-            None => None,
-        })
-    }
-}
-
-impl<'a, 'tcx> Lift<TyCtxt<'tcx>> for Term<'a> {
-    type Lifted = ty::Term<'tcx>;
-    fn lift_to_interner(self, tcx: TyCtxt<'tcx>) -> Option<Self::Lifted> {
-        match self.kind() {
-            TermKind::Ty(ty) => tcx.lift(ty).map(Into::into),
-            TermKind::Const(c) => tcx.lift(c).map(Into::into),
-        }
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////

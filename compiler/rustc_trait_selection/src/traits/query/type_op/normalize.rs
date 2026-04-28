@@ -4,7 +4,7 @@ use rustc_middle::traits::ObligationCause;
 use rustc_middle::traits::query::NoSolution;
 pub use rustc_middle::traits::query::type_op::{DeeplyNormalize, Normalize};
 use rustc_middle::ty::{
-    self, Lift, ParamEnvAnd, Ty, TyCtxt, TypeFoldable, TypeVisitableExt, Unnormalized,
+    self, ParamEnvAnd, Ty, TyCtxt, TypeFoldable, TypeVisitableExt, Unnormalized,
 };
 use rustc_span::Span;
 
@@ -79,9 +79,7 @@ where
     }
 }
 
-pub trait Normalizable<'tcx>:
-    fmt::Debug + TypeFoldable<TyCtxt<'tcx>> + Lift<TyCtxt<'tcx>> + Copy
-{
+pub trait Normalizable<'tcx>: fmt::Debug + TypeFoldable<TyCtxt<'tcx>> + Copy {
     fn type_op_method(
         tcx: TyCtxt<'tcx>,
         canonicalized: CanonicalQueryInput<'tcx, ParamEnvAnd<'tcx, Normalize<Self>>>,

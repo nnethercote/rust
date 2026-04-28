@@ -17,7 +17,7 @@ use smallvec::SmallVec;
 use crate::ty::codec::{TyDecoder, TyEncoder};
 use crate::ty::{
     self, ClosureArgs, CoroutineArgs, CoroutineClosureArgs, FallibleTypeFolder, InlineConstArgs,
-    Lift, List, Ty, TyCtxt, TypeFoldable, TypeFolder, TypeVisitable, TypeVisitor, VisitorResult,
+    List, Ty, TyCtxt, TypeFoldable, TypeFolder, TypeVisitable, TypeVisitor, VisitorResult,
     walk_visitable_list,
 };
 
@@ -314,18 +314,6 @@ impl<'tcx> GenericArg<'tcx> {
     /// ```
     pub fn walk(self) -> TypeWalker<TyCtxt<'tcx>> {
         TypeWalker::new(self)
-    }
-}
-
-impl<'a, 'tcx> Lift<TyCtxt<'tcx>> for GenericArg<'a> {
-    type Lifted = GenericArg<'tcx>;
-
-    fn lift_to_interner(self, tcx: TyCtxt<'tcx>) -> Option<Self::Lifted> {
-        match self.kind() {
-            GenericArgKind::Lifetime(lt) => tcx.lift(lt).map(|lt| lt.into()),
-            GenericArgKind::Type(ty) => tcx.lift(ty).map(|ty| ty.into()),
-            GenericArgKind::Const(ct) => tcx.lift(ct).map(|ct| ct.into()),
-        }
     }
 }
 

@@ -44,10 +44,6 @@ impl<'tcx> InternalCx<'tcx> for TyCtxt<'tcx> {
         self
     }
 
-    fn lift<T: ty::Lift<TyCtxt<'tcx>>>(self, value: T) -> Option<T::Lifted> {
-        TyCtxt::lift(self, value)
-    }
-
     fn mk_args_from_iter<I, T>(self, iter: I) -> T::Output
     where
         I: Iterator<Item = T>,

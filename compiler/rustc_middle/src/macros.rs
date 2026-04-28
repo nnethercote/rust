@@ -36,23 +36,10 @@ macro_rules! span_bug {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// Lift and TypeFoldable/TypeVisitable macros
+// TypeFoldable/TypeVisitable macros
 //
 // When possible, use one of these (relatively) convenient macros to write
 // the impls for you.
-
-macro_rules! TrivialLiftImpls {
-    ($($ty:ty),+ $(,)?) => {
-        $(
-            impl<'tcx> $crate::ty::Lift<$crate::ty::TyCtxt<'tcx>> for $ty {
-                type Lifted = Self;
-                fn lift_to_interner(self, _: $crate::ty::TyCtxt<'tcx>) -> Option<Self> {
-                    Some(self)
-                }
-            }
-        )+
-    };
-}
 
 /// Used for types that are `Copy` and which **do not care about arena
 /// allocated data** (i.e., don't need to be folded).
@@ -88,11 +75,4 @@ macro_rules! TrivialTypeTraversalImpls {
             }
         )+
     };
-}
-
-macro_rules! TrivialTypeTraversalAndLiftImpls {
-    ($($t:tt)*) => {
-        TrivialTypeTraversalImpls! { $($t)* }
-        TrivialLiftImpls! { $($t)* }
-    }
 }

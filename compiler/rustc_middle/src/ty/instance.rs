@@ -6,7 +6,7 @@ use rustc_hir as hir;
 use rustc_hir::def::{CtorKind, DefKind, Namespace};
 use rustc_hir::def_id::{CrateNum, DefId};
 use rustc_hir::lang_items::LangItem;
-use rustc_macros::{HashStable, Lift, TyDecodable, TyEncodable};
+use rustc_macros::{HashStable, TyDecodable, TyEncodable};
 use rustc_span::def_id::LOCAL_CRATE;
 use rustc_span::{DUMMY_SP, Span};
 use tracing::{debug, instrument};
@@ -25,11 +25,8 @@ use crate::ty::{
 /// Monomorphization happens on-the-fly and no monomorphized MIR is ever created. Instead, this type
 /// simply couples a potentially generic `InstanceKind` with some args, and codegen and const eval
 /// will do all required instantiations as they run.
-///
-/// Note: the `Lift` impl is currently not used by rustc, but is used by
-/// rustc_codegen_cranelift when the `jit` feature is enabled.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, TyEncodable, TyDecodable)]
-#[derive(HashStable, Lift, TypeFoldable, TypeVisitable)]
+#[derive(HashStable, TypeFoldable, TypeVisitable)]
 pub struct Instance<'tcx> {
     pub def: InstanceKind<'tcx>,
     pub args: GenericArgsRef<'tcx>,
@@ -58,7 +55,7 @@ pub enum ReifyReason {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-#[derive(TyEncodable, TyDecodable, HashStable, TypeFoldable, TypeVisitable, Lift)]
+#[derive(TyEncodable, TyDecodable, HashStable, TypeFoldable, TypeVisitable)]
 pub enum InstanceKind<'tcx> {
     /// A user-defined callable item.
     ///

@@ -1,9 +1,7 @@
 use std::ops::ControlFlow;
 
 use derive_where::derive_where;
-use rustc_type_ir_macros::{
-    GenericTypeVisitable, Lift_Generic, TypeFoldable_Generic, TypeVisitable_Generic,
-};
+use rustc_type_ir_macros::{GenericTypeVisitable, TypeFoldable_Generic, TypeVisitable_Generic};
 
 use crate::data_structures::DelayedMap;
 use crate::fold::{TypeFoldable, TypeFolder, TypeSuperFoldable, shift_region};
@@ -104,7 +102,7 @@ use crate::{self as ty, Interner};
 /// * `GR`: The "return type", which is the type of value returned upon
 ///   completion of the coroutine.
 #[derive_where(Clone, Copy, PartialEq, Hash, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 pub struct ClosureArgs<I: Interner> {
     /// Lifetime and type parameters from the enclosing function,
     /// concatenated with a tuple containing the types of the upvars.
@@ -208,7 +206,7 @@ impl<I: Interner> ClosureArgs<I> {
 }
 
 #[derive_where(Clone, Copy, PartialEq, Hash, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 pub struct CoroutineClosureArgs<I: Interner> {
     pub args: I::GenericArgs,
 }
@@ -553,7 +551,7 @@ pub struct GenSig<I: Interner> {
 impl<I: Interner> Eq for GenSig<I> {}
 /// Similar to `ClosureArgs`; see the above documentation for more.
 #[derive_where(Clone, Copy, PartialEq, Hash, Debug; I: Interner)]
-#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic, Lift_Generic)]
+#[derive(TypeVisitable_Generic, GenericTypeVisitable, TypeFoldable_Generic)]
 pub struct CoroutineArgs<I: Interner> {
     pub args: I::GenericArgs,
 }

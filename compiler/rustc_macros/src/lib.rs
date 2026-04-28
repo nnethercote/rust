@@ -12,7 +12,6 @@ mod current_version;
 mod diagnostics;
 mod extension;
 mod hash_stable;
-mod lift;
 mod print_attribute;
 mod query;
 mod serialize;
@@ -176,7 +175,6 @@ decl_derive!(
     /// visited (and its type is not required to implement `Walkable`).
     visitable::visitable_derive
 );
-decl_derive!([Lift, attributes(lift)] => lift::lift_derive);
 decl_derive!(
     [Diagnostic, attributes(
         // struct attributes

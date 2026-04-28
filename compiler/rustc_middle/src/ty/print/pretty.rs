@@ -14,7 +14,7 @@ use rustc_hir::def::{self, CtorKind, DefKind, Namespace};
 use rustc_hir::def_id::{DefIdMap, DefIdSet, LOCAL_CRATE, ModDefId};
 use rustc_hir::definitions::{DefKey, DefPathDataName};
 use rustc_hir::limit::Limit;
-use rustc_macros::{Lift, extension};
+use rustc_macros::extension;
 use rustc_session::cstore::{ExternCrate, ExternCrateSource};
 use rustc_span::{Ident, RemapPathScopeComponents, Symbol, kw, sym};
 use rustc_type_ir::{FieldInfo, Unnormalized, Upcast as _, elaborate};
@@ -2964,7 +2964,7 @@ where
 /// Wrapper type for `ty::TraitRef` which opts-in to pretty printing only
 /// the trait path. That is, it will print `Trait<U>` instead of
 /// `<T as Trait<U>>`.
-#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Lift, Hash)]
+#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Hash)]
 pub struct TraitRefPrintOnlyTraitPath<'tcx>(ty::TraitRef<'tcx>);
 
 impl<'tcx> rustc_errors::IntoDiagArg for TraitRefPrintOnlyTraitPath<'tcx> {
@@ -2984,7 +2984,7 @@ impl<'tcx> fmt::Debug for TraitRefPrintOnlyTraitPath<'tcx> {
 
 /// Wrapper type for `ty::TraitRef` which opts-in to pretty printing only
 /// the trait path, and additionally tries to "sugar" `Fn(...)` trait bounds.
-#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Lift, Hash)]
+#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Hash)]
 pub struct TraitRefPrintSugared<'tcx>(ty::TraitRef<'tcx>);
 
 impl<'tcx> rustc_errors::IntoDiagArg for TraitRefPrintSugared<'tcx> {
@@ -3005,7 +3005,7 @@ impl<'tcx> fmt::Debug for TraitRefPrintSugared<'tcx> {
 /// Wrapper type for `ty::TraitRef` which opts-in to pretty printing only
 /// the trait name. That is, it will print `Trait` instead of
 /// `<T as Trait<U>>`.
-#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Lift)]
+#[derive(Copy, Clone, TypeFoldable, TypeVisitable)]
 pub struct TraitRefPrintOnlyTraitName<'tcx>(ty::TraitRef<'tcx>);
 
 impl<'tcx> fmt::Debug for TraitRefPrintOnlyTraitName<'tcx> {
@@ -3040,7 +3040,7 @@ impl<'tcx> ty::Binder<'tcx, ty::TraitRef<'tcx>> {
     }
 }
 
-#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Lift, Hash)]
+#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Hash)]
 pub struct TraitPredPrintModifiersAndPath<'tcx>(ty::TraitPredicate<'tcx>);
 
 impl<'tcx> fmt::Debug for TraitPredPrintModifiersAndPath<'tcx> {
@@ -3056,7 +3056,7 @@ impl<'tcx> ty::TraitPredicate<'tcx> {
     }
 }
 
-#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Lift, Hash)]
+#[derive(Copy, Clone, TypeFoldable, TypeVisitable, Hash)]
 pub struct TraitPredPrintWithBoundConstness<'tcx>(
     ty::TraitPredicate<'tcx>,
     Option<ty::BoundConstness>,
@@ -3084,7 +3084,7 @@ impl<'tcx> ty::PolyTraitPredicate<'tcx> {
     }
 }
 
-#[derive(Debug, Copy, Clone, Lift)]
+#[derive(Debug, Copy, Clone)]
 pub struct PrintClosureAsImpl<'tcx> {
     pub closure: ty::ClosureArgs<TyCtxt<'tcx>>,
 }

@@ -13,7 +13,7 @@ use std::hash::{Hash, Hasher};
 use std::marker::{PhantomData, PointeeSized};
 use std::ops::{Bound, Deref};
 use std::sync::{Arc, OnceLock};
-use std::{fmt, iter, mem};
+use std::{fmt, iter};
 
 use rustc_abi::{ExternAbi, FieldIdx, Layout, LayoutData, TargetDataLayout, VariantIdx};
 use rustc_ast as ast;
@@ -45,7 +45,6 @@ use rustc_session::lint::Lint;
 use rustc_span::def_id::{CRATE_DEF_ID, DefPathHash, StableCrateId};
 use rustc_span::{DUMMY_SP, Ident, Span, Symbol, kw, sym};
 use rustc_type_ir::TyKind::*;
-pub use rustc_type_ir::lift::Lift;
 use rustc_type_ir::{CollectAndApply, FnSigKind, WithCachedTypeInfo, elaborate, search_graph};
 use tracing::{debug, instrument};
 
@@ -1002,10 +1001,6 @@ impl<'tcx> TyCtxt<'tcx> {
         (start, end)
     }
 
-    pub fn lift<T: Lift<TyCtxt<'tcx>>>(self, value: T) -> Option<T::Lifted> {
-        value.lift_to_interner(self)
-    }
-
     /// Creates a type context. To use the context call `fn enter` which
     /// provides a `TyCtxt`.
     ///
@@ -1728,82 +1723,6 @@ impl<'tcx> TyCtxt<'tcx> {
         }
     }
 }
-
-macro_rules! nop_lift {
-    ($set:ident; $ty:ty => $lifted:ty) => {
-        impl<'a, 'tcx> Lift<TyCtxt<'tcx>> for $ty {
-            type Lifted = $lifted;
-            fn lift_to_interner(self, tcx: TyCtxt<'tcx>) -> Option<Self::Lifted> {
-                // Assert that the set has the right type.
-                // Given an argument that has an interned type, the return type has the type of
-                // the corresponding interner set. This won't actually return anything, we're
-                // just doing this to compute said type!
-                fn _intern_set_ty_from_interned_ty<'tcx, Inner>(
-                    _x: Interned<'tcx, Inner>,
-                ) -> InternedSet<'tcx, Inner> {
-                    unreachable!()
-                }
-                fn _type_eq<T>(_x: &T, _y: &T) {}
-                fn _test<'tcx>(x: $lifted, tcx: TyCtxt<'tcx>) {
-                    // If `x` is a newtype around an `Interned<T>`, then `interner` is an
-                    // interner of appropriate type. (Ideally we'd also check that `x` is a
-                    // newtype with just that one field. Not sure how to do that.)
-                    let interner = _intern_set_ty_from_interned_ty(x.0);
-                    // Now check that this is the same type as `interners.$set`.
-                    _type_eq(&interner, &tcx.interners.$set);
-                }
-
-                tcx.interners
-                    .$set
-                    .contains_pointer_to(&InternedInSet(&*self.0.0))
-                    // SAFETY: `self` is interned and therefore valid
-                    // for the entire lifetime of the `TyCtxt`.
-                    .then(|| unsafe { mem::transmute(self) })
-            }
-        }
-    };
-}
-
-macro_rules! nop_list_lift {
-    ($set:ident; $ty:ty => $lifted:ty) => {
-        impl<'a, 'tcx> Lift<TyCtxt<'tcx>> for &'a List<$ty> {
-            type Lifted = &'tcx List<$lifted>;
-            fn lift_to_interner(self, tcx: TyCtxt<'tcx>) -> Option<Self::Lifted> {
-                // Assert that the set has the right type.
-                if false {
-                    let _x: &InternedSet<'tcx, List<$lifted>> = &tcx.interners.$set;
-                }
-
-                if self.is_empty() {
-                    return Some(List::empty());
-                }
-                tcx.interners
-                    .$set
-                    .contains_pointer_to(&InternedInSet(self))
-                    .then(|| unsafe { mem::transmute(self) })
-            }
-        }
-    };
-}
-
-nop_lift! { type_; Ty<'a> => Ty<'tcx> }
-nop_lift! { region; Region<'a> => Region<'tcx> }
-nop_lift! { const_; Const<'a> => Const<'tcx> }
-nop_lift! { pat; Pattern<'a> => Pattern<'tcx> }
-nop_lift! { const_allocation; ConstAllocation<'a> => ConstAllocation<'tcx> }
-nop_lift! { predicate; Predicate<'a> => Predicate<'tcx> }
-nop_lift! { predicate; Clause<'a> => Clause<'tcx> }
-nop_lift! { layout; Layout<'a> => Layout<'tcx> }
-nop_lift! { valtree; ValTree<'a> => ValTree<'tcx> }
-
-nop_list_lift! { type_lists; Ty<'a> => Ty<'tcx> }
-nop_list_lift! {
-    poly_existential_predicates; PolyExistentialPredicate<'a> => PolyExistentialPredicate<'tcx>
-}
-nop_list_lift! { bound_variable_kinds; ty::BoundVariableKind<'a> => ty::BoundVariableKind<'tcx> }
-
-// This is the impl for `&'a GenericArgs<'a>`.
-nop_list_lift! { args; GenericArg<'a> => GenericArg<'tcx> }
 
 macro_rules! sty_debug_print {
     ($fmt: expr, $ctxt: expr, $($variant: ident),*) => {{
