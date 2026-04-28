@@ -23,10 +23,10 @@ where
 {
     type T = T::T;
 
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T {
         (*self).stable(tables, cx)
     }
@@ -38,10 +38,10 @@ where
 {
     type T = Option<T::T>;
 
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T {
         self.as_ref().map(|value| value.stable(tables, cx))
     }
@@ -54,10 +54,10 @@ where
 {
     type T = Result<T::T, E::T>;
 
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T {
         match self {
             Ok(val) => Ok(val.stable(tables, cx)),
@@ -71,10 +71,10 @@ where
     T: Stable<'tcx>,
 {
     type T = Vec<T::T>;
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T {
         self.iter().map(|e| e.stable(tables, cx)).collect()
     }
@@ -86,10 +86,10 @@ where
     U: Stable<'tcx>,
 {
     type T = (T::T, U::T);
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T {
         (self.0.stable(tables, cx), self.1.stable(tables, cx))
     }
@@ -100,10 +100,10 @@ where
     T: Stable<'tcx>,
 {
     type T = RangeInclusive<T::T>;
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T {
         RangeInclusive::new(self.start().stable(tables, cx), self.end().stable(tables, cx))
     }

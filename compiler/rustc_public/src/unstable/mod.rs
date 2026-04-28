@@ -73,10 +73,10 @@ pub trait Stable<'tcx>: PointeeSized {
     /// The stable representation of the type implementing Stable.
     type T;
     /// Converts an object to the equivalent rustc_public's IR representation.
-    fn stable<'cx>(
+    fn stable(
         &self,
-        tables: &mut Tables<'cx, BridgeTys>,
-        cx: &CompilerCtxt<'cx, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        cx: &CompilerCtxt<'tcx, BridgeTys>,
     ) -> Self::T;
 }
 

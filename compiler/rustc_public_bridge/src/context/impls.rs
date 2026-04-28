@@ -17,8 +17,8 @@ use rustc_middle::ty::util::Discr;
 use rustc_middle::ty::{
     AdtDef, AdtKind, AssocItem, Binder, ClosureKind, CoroutineArgsExt, EarlyBinder,
     ExistentialTraitRef, FnSig, GenericArgsRef, Instance, InstanceKind, IntrinsicDef, List,
-    PolyFnSig, ScalarInt, TraitDef, TraitRef, Ty, TyCtxt, TyKind, TypeVisitableExt, UintTy,
-    ValTree, VariantDef, VtblEntry,
+    PolyFnSig, ScalarInt, TraitDef, TraitRef, Ty, TyKind, TypeVisitableExt, UintTy, ValTree,
+    VariantDef, VtblEntry,
 };
 use rustc_middle::{mir, ty};
 use rustc_session::cstore::ForeignModule;
@@ -53,10 +53,6 @@ impl<'tcx, B: Bridge> AllocRangeHelpers<'tcx> for CompilerCtxt<'tcx, B> {
 }
 
 impl<'tcx, B: Bridge> CompilerCtxt<'tcx, B> {
-    pub fn lift<T: ty::Lift<TyCtxt<'tcx>>>(&self, value: T) -> Option<T::Lifted> {
-        self.tcx.lift(value)
-    }
-
     pub fn adt_def(&self, def_id: DefId) -> AdtDef<'tcx> {
         self.tcx.adt_def(def_id)
     }
