@@ -897,12 +897,12 @@ where
 ///
 /// I.e., This function will load the current interface and calls a function with it.
 /// Do not nest these, as that will ICE.
-pub(crate) fn with<R>(f: impl for<'tcx> FnOnce(&CompilerInterface<'tcx>) -> R) -> R {
+pub(crate) fn with<'tcx, R>(f: impl FnOnce(&CompilerInterface<'tcx>) -> R) -> R {
     assert!(TLV.is_set());
     TLV.with(|tlv| {
         let ptr = tlv.get();
         assert!(!ptr.is_null());
-        f(unsafe { *(ptr as *const &CompilerInterface<'_>) })
+        f(unsafe { *(ptr as *const &CompilerInterface<'tcx>) })
     })
 }
 

@@ -93,7 +93,7 @@ pub trait RustcInternal {
     type T<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx>;
 }

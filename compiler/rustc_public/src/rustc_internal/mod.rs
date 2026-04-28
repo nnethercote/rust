@@ -58,8 +58,8 @@ pub fn crate_num(item: &crate::Crate) -> CrateNum {
 
 /// Loads the current context and calls a function with it.
 /// Do not nest these, as that will ICE.
-pub(crate) fn with_bridge<R>(
-    f: impl for<'tcx> FnOnce(&mut Tables<'tcx, BridgeTys>, &CompilerCtxt<'tcx, BridgeTys>) -> R,
+pub(crate) fn with_bridge<'tcx, R>(
+    f: impl FnOnce(&mut Tables<'tcx, BridgeTys>, &CompilerCtxt<'tcx, BridgeTys>) -> R,
 ) -> R {
     with(|compiler| {
         let mut tables = compiler.tables.borrow_mut();

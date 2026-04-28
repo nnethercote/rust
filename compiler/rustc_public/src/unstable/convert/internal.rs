@@ -26,7 +26,7 @@ impl RustcInternal for CrateItem {
     type T<'tcx> = rustc_span::def_id::DefId;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         self.0.internal(tables, tcx)
@@ -37,7 +37,7 @@ impl RustcInternal for CrateNum {
     type T<'tcx> = rustc_span::def_id::CrateNum;
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         rustc_span::def_id::CrateNum::from_usize(self.0)
@@ -48,7 +48,7 @@ impl RustcInternal for DefId {
     type T<'tcx> = rustc_span::def_id::DefId;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         tables.def_ids[*self]
@@ -59,7 +59,7 @@ impl RustcInternal for GenericArgs {
     type T<'tcx> = rustc_ty::GenericArgsRef<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         InternalCx::mk_args_from_iter(tcx, self.0.iter().map(|arg| arg.internal(tables, tcx)))
@@ -70,7 +70,7 @@ impl RustcInternal for GenericArgKind {
     type T<'tcx> = rustc_ty::GenericArg<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         let arg: rustc_ty::GenericArg<'tcx> = match self {
@@ -86,7 +86,7 @@ impl RustcInternal for Region {
     type T<'tcx> = rustc_ty::Region<'tcx>;
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         // Cannot recover region. Use erased for now.
@@ -98,10 +98,10 @@ impl RustcInternal for Ty {
     type T<'tcx> = InternalTy<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
-        tcx.lift(tables.types[*self]).unwrap()
+        tables.types[*self]
     }
 }
 
@@ -109,10 +109,10 @@ impl RustcInternal for TyConst {
     type T<'tcx> = InternalConst<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
-        tcx.lift(tables.ty_consts[self.id]).unwrap()
+        tables.ty_consts[self.id]
     }
 }
 
@@ -120,7 +120,7 @@ impl RustcInternal for Pattern {
     type T<'tcx> = rustc_ty::Pattern<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         tcx.mk_pat(match self {
@@ -141,7 +141,7 @@ impl RustcInternal for RigidTy {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -208,7 +208,7 @@ impl RustcInternal for IntTy {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -227,7 +227,7 @@ impl RustcInternal for UintTy {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -246,7 +246,7 @@ impl RustcInternal for FloatTy {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -263,7 +263,7 @@ impl RustcInternal for Mutability {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -278,7 +278,7 @@ impl RustcInternal for Movability {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -293,7 +293,7 @@ impl RustcInternal for RawPtrKind {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -309,7 +309,7 @@ impl RustcInternal for FnSig {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         let fn_sig_kind = rustc_ty::FnSigKind::default()
@@ -328,7 +328,7 @@ impl RustcInternal for VariantIdx {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         rustc_abi::VariantIdx::from(self.to_index())
@@ -340,7 +340,7 @@ impl RustcInternal for VariantDef {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         self.adt_def.internal(tables, tcx).variant(self.idx.internal(tables, tcx))
@@ -351,22 +351,17 @@ impl RustcInternal for MirConst {
     type T<'tcx> = rustc_middle::mir::Const<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         let constant = tables.mir_consts[self.id];
         match constant {
-            rustc_middle::mir::Const::Ty(ty, ct) => {
-                rustc_middle::mir::Const::Ty(tcx.lift(ty).unwrap(), tcx.lift(ct).unwrap())
-            }
+            rustc_middle::mir::Const::Ty(ty, ct) => rustc_middle::mir::Const::Ty(ty, ct),
             rustc_middle::mir::Const::Unevaluated(uneval, ty) => {
-                rustc_middle::mir::Const::Unevaluated(
-                    tcx.lift(uneval).unwrap(),
-                    tcx.lift(ty).unwrap(),
-                )
+                rustc_middle::mir::Const::Unevaluated(uneval, ty)
             }
             rustc_middle::mir::Const::Val(const_val, ty) => {
-                rustc_middle::mir::Const::Val(tcx.lift(const_val).unwrap(), tcx.lift(ty).unwrap())
+                rustc_middle::mir::Const::Val(const_val, ty)
             }
         }
     }
@@ -377,7 +372,7 @@ impl RustcInternal for MonoItem {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         use rustc_middle::mono as rustc_mono;
@@ -396,10 +391,10 @@ impl RustcInternal for Instance {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
-        tcx.lift(tables.instances[self.def]).unwrap()
+        tables.instances[self.def]
     }
 }
 
@@ -408,7 +403,7 @@ impl RustcInternal for StaticDef {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         self.0.internal(tables, tcx)
@@ -425,7 +420,7 @@ where
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         rustc_ty::Binder::bind_with_vars(
@@ -442,7 +437,7 @@ impl RustcInternal for BoundVariableKind {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -469,7 +464,7 @@ impl RustcInternal for ExistentialPredicate {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -491,7 +486,7 @@ impl RustcInternal for ExistentialProjection {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         use crate::unstable::internal_cx::ExistentialProjectionHelpers;
@@ -508,7 +503,7 @@ impl RustcInternal for TermKind {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -523,7 +518,7 @@ impl RustcInternal for ExistentialTraitRef {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         use crate::unstable::internal_cx::ExistentialTraitRefHelpers;
@@ -539,7 +534,7 @@ impl RustcInternal for TraitRef {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         use crate::unstable::internal_cx::TraitRefHelpers;
@@ -551,7 +546,7 @@ impl RustcInternal for AllocId {
     type T<'tcx> = rustc_middle::mir::interpret::AllocId;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         tables.alloc_ids[*self]
@@ -563,7 +558,7 @@ impl RustcInternal for ClosureKind {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -578,7 +573,7 @@ impl RustcInternal for AdtDef {
     type T<'tcx> = rustc_ty::AdtDef<'tcx>;
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         InternalCx::adt_def(tcx, self.0.internal(tables, tcx))
@@ -590,7 +585,7 @@ impl RustcInternal for Abi {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match *self {
@@ -631,7 +626,7 @@ impl RustcInternal for Safety {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -646,7 +641,7 @@ impl RustcInternal for Constness {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -661,7 +656,7 @@ impl RustcInternal for Asyncness {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -675,7 +670,7 @@ impl RustcInternal for Span {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         tables.spans[*self]
@@ -687,10 +682,10 @@ impl RustcInternal for Layout {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        tables: &mut Tables<'tcx, BridgeTys>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
-        tcx.lift(tables.layouts[*self]).unwrap()
+        tables.layouts[*self]
     }
 }
 
@@ -699,7 +694,7 @@ impl RustcInternal for Place {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         rustc_middle::mir::Place {
@@ -714,7 +709,7 @@ impl RustcInternal for ProjectionElem {
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -748,7 +743,7 @@ impl RustcInternal for BinOp {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -784,7 +779,7 @@ impl RustcInternal for UnOp {
 
     fn internal<'tcx>(
         &self,
-        _tables: &mut Tables<'_, BridgeTys>,
+        _tables: &mut Tables<'tcx, BridgeTys>,
         _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         match self {
@@ -803,7 +798,7 @@ where
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         (*self).internal(tables, tcx)
@@ -818,7 +813,7 @@ where
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         self.as_ref().map(|inner| inner.internal(tables, tcx))
@@ -833,7 +828,7 @@ where
 
     fn internal<'tcx>(
         &self,
-        tables: &mut Tables<'_, BridgeTys>,
+        tables: &mut Tables<'tcx, BridgeTys>,
         tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
         self.iter().map(|e| e.internal(tables, tcx)).collect()
