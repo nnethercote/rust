@@ -49,9 +49,9 @@ impl RustcInternal for DefId {
     fn internal<'tcx>(
         &self,
         tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
-        tcx.lift(tables.def_ids[*self]).unwrap()
+        tables.def_ids[*self]
     }
 }
 
@@ -78,7 +78,7 @@ impl RustcInternal for GenericArgKind {
             GenericArgKind::Type(ty) => ty.internal(tables, tcx).into(),
             GenericArgKind::Const(cnst) => cnst.internal(tables, tcx).into(),
         };
-        tcx.lift(arg).unwrap()
+        arg
     }
 }
 
@@ -316,11 +316,10 @@ impl RustcInternal for FnSig {
             .set_abi(self.abi.internal(tables, tcx))
             .set_safe(self.safety == Safety::Safe)
             .set_c_variadic(self.c_variadic);
-        tcx.lift(rustc_ty::FnSig {
+        rustc_ty::FnSig {
             inputs_and_output: tcx.mk_type_list(&self.inputs_and_output.internal(tables, tcx)),
             fn_sig_kind,
-        })
-        .unwrap()
+        }
     }
 }
 
@@ -553,9 +552,9 @@ impl RustcInternal for AllocId {
     fn internal<'tcx>(
         &self,
         tables: &mut Tables<'_, BridgeTys>,
-        tcx: impl InternalCx<'tcx>,
+        _tcx: impl InternalCx<'tcx>,
     ) -> Self::T<'tcx> {
-        tcx.lift(tables.alloc_ids[*self]).unwrap()
+        tables.alloc_ids[*self]
     }
 }
 

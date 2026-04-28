@@ -1911,8 +1911,6 @@ fn pretty_print_const_value_tcx<'tcx>(
         // E.g. `transmute([0usize; 2]): (u8, *mut T)` needs to know `T: Sized`
         // to be able to destructure the tuple into `(0u8, *mut T)`
         (_, ty::Array(..) | ty::Tuple(..) | ty::Adt(..)) if !ty.has_non_region_param() => {
-            let ct = tcx.lift(ct).unwrap();
-            let ty = tcx.lift(ty).unwrap();
             if let Some(contents) = tcx.try_destructure_mir_constant_for_user_output(ct, ty) {
                 let fields: Vec<(ConstValue, Ty<'_>)> = contents.fields.to_vec();
                 match *ty.kind() {
@@ -1937,7 +1935,6 @@ fn pretty_print_const_value_tcx<'tcx>(
                             .variant
                             .expect("destructed mir constant of adt without variant idx");
                         let variant_def = &def.variant(variant_idx);
-                        let args = tcx.lift(args).unwrap();
                         let mut p = FmtPrinter::new(tcx, Namespace::ValueNS);
                         p.print_alloc_ids = true;
                         p.pretty_print_value_path(variant_def.def_id, args)?;
@@ -1974,7 +1971,6 @@ fn pretty_print_const_value_tcx<'tcx>(
         (ConstValue::Scalar(scalar), _) => {
             let mut p = FmtPrinter::new(tcx, Namespace::ValueNS);
             p.print_alloc_ids = true;
-            let ty = tcx.lift(ty).unwrap();
             p.pretty_print_const_scalar(scalar, ty)?;
             fmt.write_str(&p.into_buffer())?;
             return Ok(());
