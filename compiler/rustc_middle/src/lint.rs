@@ -124,12 +124,15 @@ impl From<StableLevelSpec> for LevelSpec {
 
 /// Return type for the `shallow_lint_levels_on` query.
 ///
-/// This map represents the set of allowed lints and allowance levels given
-/// by the attributes for *a single HirId*.
+/// This map represents lints levels given by the attributes for *a single HirId*.
 #[derive(Default, Debug, StableHash)]
 pub struct ShallowLintLevelMap {
-    pub expectations: Vec<(StableLintExpectationId, LintExpectation)>,
+    // All the specs for this HirId. This is accessed frequently, e.g. for every lint emitted.
     pub specs: SortedMap<ItemLocalId, FxIndexMap<LintId, StableLevelSpec>>,
+
+    // Additional information about the `expect` specs for this HirId. This is consulted only once
+    // per compilation session, in `check_expectations`/`lint_expectations`.
+    pub expectations: Vec<(StableLintExpectationId, LintExpectation)>,
 }
 
 /// Verify the effect of special annotations: `warnings` lint level and lint caps.
