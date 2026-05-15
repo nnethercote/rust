@@ -494,14 +494,6 @@ where
         self.features
     }
 
-    fn current_specs(&self) -> &FxIndexMap<LintId, LevelSpec<P::LintExpectationId>> {
-        self.provider.current_specs()
-    }
-
-    fn insert(&mut self, id: LintId, level_spec: LevelSpec<P::LintExpectationId>) {
-        self.provider.insert(id, level_spec)
-    }
-
     fn add_command_line(&mut self) {
         for &(ref lint_name, level) in &self.sess.opts.lint_opts {
             // Checks the validity of lint names derived from the command line.
@@ -558,7 +550,7 @@ where
             };
             for &id in ids {
                 // ForceWarn and Forbid cannot be overridden
-                if let Some(level_spec) = self.current_specs().get(&id)
+                if let Some(level_spec) = self.provider.current_specs().get(&id)
                     && matches!(level_spec.level(), Level::ForceWarn | Level::Forbid)
                 {
                     continue;
@@ -566,7 +558,7 @@ where
 
                 if self.check_gated_lint(id, DUMMY_SP, true) {
                     let src = LintLevelSource::CommandLine(lint_flag_val, level);
-                    self.insert(id, LevelSpec::new(level, None, src));
+                    self.provider.insert(id, LevelSpec::new(level, None, src));
                 }
             }
         }
@@ -608,7 +600,7 @@ where
             debug!(
                 "fcw_warning={:?}, specs.get(&id) = {:?}, old_src={:?}, id_name={:?}",
                 fcw_warning,
-                self.current_specs(),
+                self.provider.current_specs(),
                 old_src,
                 id.lint.name_lower(),
             );
@@ -664,14 +656,14 @@ where
         match (old_level, level) {
             // If the new level is an expectation store it in `ForceWarn`
             (Level::ForceWarn, Level::Expect) => {
-                self.insert(id, LevelSpec::new(Level::ForceWarn, lint_id, old_src))
+                self.provider.insert(id, LevelSpec::new(Level::ForceWarn, lint_id, old_src))
             }
             // Keep `ForceWarn` level but drop the expectation
             (Level::ForceWarn, _) => {
-                self.insert(id, LevelSpec::new(Level::ForceWarn, None, old_src))
+                self.provider.insert(id, LevelSpec::new(Level::ForceWarn, None, old_src))
             }
             // Set the lint level as normal
-            _ => self.insert(id, LevelSpec::new(level, lint_id, src)),
+            _ => self.provider.insert(id, LevelSpec::new(level, lint_id, src)),
         };
     }
 
@@ -679,7 +671,7 @@ where
         let sess = self.sess;
         for (attr_index, attr) in attrs.iter().enumerate() {
             if attr.is_automatically_derived_attr() {
-                self.insert(
+                self.provider.insert(
                     LintId::of(SINGLE_USE_LIFETIMES),
                     LevelSpec::new(Level::Allow, None, LintLevelSource::Default),
                 );
@@ -688,7 +680,7 @@ where
 
             // `#[doc(hidden)]` disables missing_docs check.
             if attr.is_doc_hidden() {
-                self.insert(
+                self.provider.insert(
                     LintId::of(MISSING_DOCS),
                     LevelSpec::new(Level::Allow, None, LintLevelSource::Default),
                 );
@@ -925,7 +917,7 @@ where
         }
 
         if self.lint_added_lints && !is_crate_node {
-            for (id, level_spec) in self.current_specs().iter() {
+            for (id, level_spec) in self.provider.current_specs().iter() {
                 if !id.lint.crate_level_only {
                     continue;
                 }
